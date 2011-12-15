@@ -1,4 +1,5 @@
 (ns sumo.client
+  (:refer-clojure :exclude [get])
   (:import (com.basho.riak.client IRiakClient RiakFactory)))
 
 (def ^{:private true} default-host "127.0.0.1")
@@ -16,3 +17,6 @@
 (defn ping [client]
   (.ping client))
 
+(defn get [client bucketname keyname]
+  (let [bucket (.createBucket client bucketname)]
+    (.fetch (.execute bucket) keyname)))
