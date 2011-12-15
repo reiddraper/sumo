@@ -19,4 +19,22 @@
 
 (defn get [client bucketname keyname]
   (let [bucket (.createBucket client bucketname)]
-    (.fetch (.execute bucket) keyname)))
+    (.execute (.fetch (.execute bucket) keyname))))
+
+(defn put [client bucketname keyname obj]
+  (let [bucket (.createBucket client bucketname)]
+    (.execute (.store (.execute bucket) keyname obj))))
+
+(comment
+  ;; usage currently looks like
+  (require 'sumo.client :reload)
+
+  (def c (sumo.client/connect))
+
+  (sumo.client/ping c)
+
+  (def value (.getBytes "hello, sumo!" "Utf-8"))
+
+  (sumo.client/put c "bucket" "key" value) 
+
+  (java.lang.String. (.getValue (sumo.client/get c "bucket" "key"))))
