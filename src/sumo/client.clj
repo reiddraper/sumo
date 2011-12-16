@@ -33,7 +33,7 @@
   ([] (connect default-host
                default-port))
   ([host port]
-    (PBClientAdapter.
+     (PBClientAdapter.
       (RiakClient. host port))))
 
 (defn ping [client]
@@ -41,13 +41,13 @@
 
 (defn get [client bucketname keyname]
   (let [results (.fetch client bucketname keyname)
-       first-result  (first (seq results))]
+        first-result  (first (seq results))]
     (.getValueAsString first-result)))
 
 (defn put [client bucketname keyname value]
   "Currently value is expected to be a utf-8 string"
   (let [base-object (RiakObjectBuilder/newBuilder
-                      bucketname keyname)
+                     bucketname keyname)
         riak-object (-> base-object
-                     (.withValue value) (.build))]
+                        (.withValue value) (.build))]
     (.store client riak-object)))
