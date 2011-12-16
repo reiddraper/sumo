@@ -1,6 +1,8 @@
 (ns sumo.client
   (:refer-clojure :exclude [get])
-  (:import (com.basho.riak.client IRiakClient RiakFactory)))
+  (:import (com.basho.riak.client.builders RiakObjectBuilder))
+  (:import (com.basho.riak.pbc RiakClient))
+  (:import (com.basho.riak.client.raw.pbc PBClientAdapter)))
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
@@ -12,18 +14,25 @@
   ([] (connect default-host
                default-port))
   ([host port]
-    (RiakFactory/pbcClient host port)))
+    (PBClientAdapter.
+      (RiakClient. host port))))
 
 (defn ping [client]
   (.ping client))
 
 (defn get [client bucketname keyname]
-  (let [bucket (.createBucket client bucketname)]
-    (.execute (.fetch (.execute bucket) keyname))))
+  (let [results (.fetch c bucketname keyname)
+       first-result  (first (seq results))]
+    (.getValueAsString first-result)))
 
-(defn put [client bucketname keyname obj]
-  (let [bucket (.createBucket client bucketname)]
-    (.execute (.store (.execute bucket) keyname obj))))
+(defn put [client bucketname keyname value]
+  "Currently value is expected to be a utf-8 string"
+  (let [base-object (RiakObjectBuilder/newBuilder
+                      bucketname keyname)
+        riak-object (-> base-object
+                     (.withValue value) (.build))]
+    (.store c riak-object)))
+
 
 (comment
   ;; usage currently looks like
@@ -33,8 +42,7 @@
 
   (sumo.client/ping c)
 
-  (def value (.getBytes "hello, sumo!" "Utf-8"))
+  (sumo.client/put c "bucket" "key" "hello, sumo!\n")
 
-  (sumo.client/put c "bucket" "key" value) 
-
-  (java.lang.String. (.getValue (sumo.client/get c "bucket" "key"))))
+  (print (sumo.client/get c "bucket" "key"))
+)
