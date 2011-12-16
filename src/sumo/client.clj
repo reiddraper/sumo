@@ -51,17 +51,3 @@
         riak-object (-> base-object
                      (.withValue value) (.build))]
     (.store client riak-object)))
-
-
-(comment
-  ;; usage currently looks like
-  (require 'sumo.client :reload)
-
-  (def c (sumo.client/connect))
-
-  (sumo.client/ping c)
-
-  (sumo.client/put c "bucket" "key" "hello, sumo!\n")
-
-  (print (sumo.client/get c "bucket" "key"))
-)
