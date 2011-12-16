@@ -36,8 +36,11 @@
      (PBClientAdapter.
       (RiakClient. host port))))
 
-(defn ping [client]
-  (.ping client))
+(defn ping
+  "Returns true or raises ConnectException"
+  [client]
+  (let [result (.ping client)]
+    (if (nil? result) true result)))
 
 (defn get [client bucketname keyname]
   (let [results (.fetch client bucketname keyname)
