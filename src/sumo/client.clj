@@ -26,6 +26,22 @@
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
+(defn- riak-object-to-map
+  "Turn an IRiakObject implementation into
+  a Clojure map"
+  [riak-object]
+  ;; TODO
+  ;; add support for 2i
+  (-> {}
+    (assoc :vector-clock (.getVClock riak-object))
+    (assoc :content-type (.getContentType riak-object))
+    (assoc :vtag (.getVtag riak-object))
+    (assoc :last-modified (.getLastModified riak-object))
+    (assoc :metadata (into {} (.getMeta riak-object)))
+    ;; :value is currently only available
+    ;; as a byte-array
+    (assoc :value (.getValue riak-object))))
+
 (defn connect
   "Return a connection. With no arguments,
   this returns a connection to localhost
@@ -43,10 +59,8 @@
     (if (nil? result) true result)))
 
 (defn get [client bucketname keyname]
-  (let [results (.fetch client bucketname keyname)
-        first-result (first (seq results))]
-    (when first-result
-      (.getValueAsString first-result))))
+  (let [results (.fetch client bucketname keyname)]
+    (map riak-object-to-map results)))
 
 (defn put [client bucketname keyname value]
   "Currently value is expected to be a utf-8 string"
