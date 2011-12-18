@@ -18,13 +18,40 @@
 ;; -------------------------------------------------------------------
 
 (ns sumo.client
-  (:refer-clojure :exclude [get])
+  (:refer-clojure :exclude [get key])
   (:import (com.basho.riak.client.builders RiakObjectBuilder))
   (:import (com.basho.riak.pbc RiakClient))
   (:import (com.basho.riak.client.raw.pbc PBClientAdapter)))
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
+
+(defn- riak-object-to-map
+  "Turn an IRiakObject implementation into
+  a Clojure map"
+  [riak-object]
+  ;; TODO
+  ;; add support for 2i
+  (-> {}
+    (assoc :vector-clock (.getVClock riak-object))
+    (assoc :content-type (.getContentType riak-object))
+    (assoc :vtag (.getVtag riak-object))
+    (assoc :last-modified (.getLastModified riak-object))
+    (assoc :metadata (into {} (.getMeta riak-object)))
+    ;; :value is currently only available
+    ;; as a byte-array
+    (assoc :value (.getValue riak-object))))
+
+(defn- map-to-riak-object
+  "Construct a DefaultRiakObject from
+  a `bucket` `key` and `obj` map"
+  [bucket key obj]
+  (-> (RiakObjectBuilder/newBuilder bucket key)
+    (.withValue (:value obj))
+    (.withContentType (:content-type obj))
+    (.withVClock (:vector-clock obj))
+    (.withUsermeta (:metadata obj {}))
+    (.build)))
 
 (defn connect
   "Return a connection. With no arguments,
@@ -43,15 +70,10 @@
     (if (nil? result) true result)))
 
 (defn get [client bucketname keyname]
-  (let [results (.fetch client bucketname keyname)
-        first-result (first (seq results))]
-    (when first-result
-      (.getValueAsString first-result))))
+  (let [results (.fetch client bucketname keyname)]
+    (map riak-object-to-map results)))
 
-(defn put [client bucketname keyname value]
+(defn put [client bucket key obj]
   "Currently value is expected to be a utf-8 string"
-  (let [base-object (RiakObjectBuilder/newBuilder
-                     bucketname keyname)
-        riak-object (-> base-object
-                        (.withValue value) (.build))]
+  (let [riak-object (map-to-riak-object bucket key obj)]
     (.store client riak-object)))
