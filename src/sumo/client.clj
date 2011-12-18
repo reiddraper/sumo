@@ -18,7 +18,7 @@
 ;; -------------------------------------------------------------------
 
 (ns sumo.client
-  (:refer-clojure :exclude [get])
+  (:refer-clojure :exclude [get key])
   (:import (com.basho.riak.client.builders RiakObjectBuilder))
   (:import (com.basho.riak.pbc RiakClient))
   (:import (com.basho.riak.client.raw.pbc PBClientAdapter)))
@@ -42,6 +42,17 @@
     ;; as a byte-array
     (assoc :value (.getValue riak-object))))
 
+(defn- map-to-riak-object
+  "Construct a DefaultRiakObject from
+  a `bucket` `key` and `obj` map"
+  [bucket key obj]
+  (-> (RiakObjectBuilder/newBuilder bucket key)
+    (.withValue (:value obj))
+    (.withContentType (:content-type obj))
+    (.withVClock (:vector-clock obj))
+    (.withUsermeta (:metadata obj {}))
+    (.build)))
+
 (defn connect
   "Return a connection. With no arguments,
   this returns a connection to localhost
@@ -62,10 +73,7 @@
   (let [results (.fetch client bucketname keyname)]
     (map riak-object-to-map results)))
 
-(defn put [client bucketname keyname value]
+(defn put [client bucket key obj]
   "Currently value is expected to be a utf-8 string"
-  (let [base-object (RiakObjectBuilder/newBuilder
-                     bucketname keyname)
-        riak-object (-> base-object
-                        (.withValue value) (.build))]
+  (let [riak-object (map-to-riak-object bucket key obj)]
     (.store client riak-object)))
