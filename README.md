@@ -8,9 +8,10 @@
 
 (sc/ping c)
 
-(sc/put c "bucket" "key" "hello, sumo!\n")
+(sc/put c "bucket" "key" {:content-type "text/plain" :value "hello, sumo!"})
 
-(print (sumo.client/get c "bucket" "key"))
+;; returns a lazy-seq of hashes
+(sumo.client/get c "bucket" "key")
 ```
 #
 ## License
