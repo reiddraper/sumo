@@ -70,14 +70,21 @@
   (let [result (.ping client)]
     (if (nil? result) true result)))
 
-(defn get [client bucketname keyname]
-  (let [results (.fetch client bucketname keyname)
+(defn get [client bucket key]
+  "Retrieve a lazy-seq of objects at `bucket` and `key`
+  Usage looks like:
+      (def results (sumo.client/get client \"bucket\" \"key\"
+      (println (:value (first (results))))
+  "
+  (let [results (.fetch client bucket key)
         des-fn #(assoc % :value (serializers/deserialize %))
         mapfn (comp des-fn riak-object-to-map)]
     (map mapfn results)))
 
 (defn put [client bucket key obj]
-  "Currently value is expected to be a utf-8 string"
+  "Store a object into Riak. Usage
+  looks like:
+      (sumo.client/put client \"bucket\" \"hey\" {:content-type \"text/plain\" :value \"hello!\""
   (let [serialized (serializers/serialize obj)
         riak-object (assoc obj :value serialized)
         riak-object (map-to-riak-object bucket key riak-object)]
