@@ -24,11 +24,11 @@
 
 (defmethod serialize :default
   [{content-type :content-type value :value}]
-  (println "the content type is" content-type)
-  (if (= content-type "application/octet-stream")
-    value
-    (throw (Exception.
-             (str "could not serialize content-type " content-type)))))
+  (throw (Exception. (str "No serializer for content-type: " content-type))))
+
+(defmethod serialize "application/octet-stream"
+  [{value :value}]
+  value)
 
 (defmethod serialize "application/json"
   [{value :value}]
@@ -38,19 +38,32 @@
   [{value :value}]
   value)
 
+(defmethod serialize "application/clojure"
+  [{value :value}]
+  (binding [*print-dup* true]
+    (pr-str value)))
+
+
 (defmulti deserialize :content-type)
 
 (defmethod deserialize :default
-  [{content-type :content-type value :value}]
-  (if (= content-type "application/octet-stream")
-    value
-    (throw (Exception.
-             (str "could not deserialize content-type " content-type)))))
+  [{content-type :content-type}]
+  (throw (Exception. (str "No deserializer for content-type: " content-type))))
+
+(defmethod deserialize "application/octet-stream"
+  [{value :value}]
+  value)
 
 (defmethod deserialize "application/json"
   [{value :value}]
-  (json/parse-string (String. value)))
+  (json/parse-string (String. value))) ; TODO: Having to turn the byte
+                                       ; array into a String seems wrong?
 
 (defmethod deserialize "text/plain"
   [{value :value}]
   (String. value))
+
+(defmethod deserialize "application/clojure"
+  [{value :value}]
+  (binding [*print-dup* true]
+    (read-string value)))
