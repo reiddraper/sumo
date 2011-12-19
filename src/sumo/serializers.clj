@@ -38,6 +38,10 @@
   [{value :value}]
   value)
 
+(defmethod serialize "application/clojure"
+  [{value :value}]
+  (binding [*print-dup* true]
+    (pr-str value)))
 
 
 (defmulti deserialize :content-type)
@@ -58,3 +62,7 @@
   [{value :value}]
   (String. value))
 
+(defmethod deserialize "application/clojure"
+  [{value :value}]
+  (binding [*print-dup* true]
+    (read-string value)))
