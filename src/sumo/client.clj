@@ -18,6 +18,7 @@
 ;; -------------------------------------------------------------------
 
 (ns sumo.client
+  (:require [sumo.serializers :as serializers])
   (:refer-clojure :exclude [get key])
   (:import (com.basho.riak.client.builders RiakObjectBuilder))
   (:import (com.basho.riak.pbc RiakClient))
@@ -70,10 +71,14 @@
     (if (nil? result) true result)))
 
 (defn get [client bucketname keyname]
-  (let [results (.fetch client bucketname keyname)]
-    (map riak-object-to-map results)))
+  (let [results (.fetch client bucketname keyname)
+        des-fn #(assoc % :value (serializers/deserialize %))
+        mapfn (comp des-fn riak-object-to-map)]
+    (map mapfn results)))
 
 (defn put [client bucket key obj]
   "Currently value is expected to be a utf-8 string"
-  (let [riak-object (map-to-riak-object bucket key obj)]
+  (let [serialized (serializers/serialize obj)
+        riak-object (assoc obj :value serialized)
+        riak-object (map-to-riak-object bucket key riak-object)]
     (.store client riak-object)))

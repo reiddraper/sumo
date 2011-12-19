@@ -24,13 +24,19 @@
 
 (defmethod serialize :default
   [{content-type :content-type value :value}]
+  (println "the content type is" content-type)
   (if (= content-type "application/octet-stream")
     value
-    "TODO: Exception, because this content-type is unknown"))
+    (throw (Exception.
+             (str "could not serialize content-type " content-type)))))
 
 (defmethod serialize "application/json"
   [{value :value}]
   (json/generate-string value))
+
+(defmethod serialize "text/plain"
+  [{value :value}]
+  value)
 
 (defmulti deserialize :content-type)
 
@@ -38,8 +44,13 @@
   [{content-type :content-type value :value}]
   (if (= content-type "application/octet-stream")
     value
-    "TODO: Exception, because this content-type is unknown"))
+    (throw (Exception.
+             (str "could not deserialize content-type " content-type)))))
 
 (defmethod deserialize "application/json"
   [{value :value}]
-  (json/parse-string value))
+  (json/parse-string (String. value)))
+
+(defmethod deserialize "text/plain"
+  [{value :value}]
+  (String. value))
