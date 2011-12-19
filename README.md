@@ -2,7 +2,8 @@
 
 ## Usage
 ```clojure
-(require '[sumo.client :as sumo])
+(require '[sumo.client :as sumo]
+         '[clojure.pprint :as pp])
 
 (def client (sumo/connect))
 
@@ -14,14 +15,14 @@
 ; => nil
 
 ;; returns a lazy-seq of hashes
-(pprint (sumo/get client "bucket" "key"))
-; =>({:value "hello, sumo!",
-;     :metadata {},
-;     :last-modified #<Date Sun Dec 18 20:40:03 CST 2011>,
-;     :vtag "6YWpgJW8WpnKlNTOeOxKZf",
-;     :content-type "application/json",
-;     :vector-clock
-;     #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
+(pp/pprint (sumo/get client "bucket" "key"))
+; => ({:value "hello, sumo!",
+;      :metadata {},
+;      :last-modified #<Date Sun Dec 18 20:40:03 CST 2011>,
+;      :vtag "6YWpgJW8WpnKlNTOeOxKZf",
+;      :content-type "application/json",
+;      :vector-clock
+;      #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
 ```
 #
 ## License
