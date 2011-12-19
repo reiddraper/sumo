@@ -73,18 +73,18 @@
 (defn get [client bucket key]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
   Usage looks like:
-      (def results (sumo.client/get client \"bucket\" \"key\"
-      (println (:value (first (results))))
-  "
+      (def results (sumo.client/get client \"bucket\" \"key\"))
+      (println (:value (first (results))))"
   (let [results (.fetch client bucket key)
         des-fn #(assoc % :value (serializers/deserialize %))
-        mapfn (comp des-fn riak-object-to-map)]
-    (map mapfn results)))
+        mapfn (comp des-fn riak-object-to-map)
+        results-seq (map mapfn results)]
+    (if (seq results-seq) results-seq nil)))
 
 (defn put [client bucket key obj]
-  "Store a object into Riak. Usage
-  looks like:
-      (sumo.client/put client \"bucket\" \"hey\" {:content-type \"text/plain\" :value \"hello!\""
+  "Store an object into Riak.
+  Usage looks like:
+      (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
   (let [serialized (serializers/serialize obj)
         riak-object (assoc obj :value serialized)
         riak-object (map-to-riak-object bucket key riak-object)]

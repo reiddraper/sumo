@@ -1,6 +1,3 @@
 (ns sumo.test.core
-  (:use [sumo.core])
+  (:use [sumo.client])
   (:use [clojure.test]))
-
-(deftest replace-me ;; FIXME: write
-  (is false "No tests have been written."))
