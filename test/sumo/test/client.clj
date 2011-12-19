@@ -8,7 +8,7 @@
   (client/ping c))
 
 (deftest get-missing
-  (is (nil? (client/get c "does-not-exist" "does-not-exist"))))
+  (is (nil? (seq (client/get c "does-not-exist" "does-not-exist")))))
 
 (deftest put-get-json
   (is (let [obj {:content-type "application/json"

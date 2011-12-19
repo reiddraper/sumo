@@ -69,18 +69,16 @@
     (if (nil? result) true result)))
 
 (defn get-raw [client bucket key]
-  (let [results (.fetch client bucket key)
-        seq-results (map riak-object-to-map results)]
-    (if (seq seq-results) seq-results nil)))
+  (let [results (.fetch client bucket key)]
+    (map riak-object-to-map results)))
 
 (defn get [client bucket key]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
   Usage looks like:
       (def results (sumo.client/get client \"bucket\" \"key\"))
       (println (:value (first (results))))"
-  (let [results (get-raw client bucket key)
-        results-seq (map #(assoc % :value (deserialize %)) results)]
-    (if (seq results-seq) results-seq nil)))
+  (let [results (get-raw client bucket key)]
+    (map #(assoc % :value (deserialize %)) results)))
 
 (defn put-raw [client bucket key obj]
   (let [riak-object (map-to-riak-object bucket key obj)]
