@@ -1,3 +1,3 @@
 (ns sumo.test.core
-  (:use [sumo.client])
+  (:use [sumo.core])
   (:use [clojure.test]))

@@ -2,16 +2,24 @@
 
 ## Usage
 ```clojure
-(require '[sumo.client :as sc])
+(require '[sumo.client :as sumo])
 
-(def c (sc/connect))
+(def client (sumo/connect))
 
-(sc/ping c)
+(sumo/ping client)
 
-(sc/put c "bucket" "key" {:content-type "text/plain" :value "hello, sumo!"})
+(sumo/put client "bucket" "key" {:content-type "application/json"
+                                 :value "hello, sumo!"})
 
 ;; returns a lazy-seq of hashes
-(sumo.client/get c "bucket" "key")
+(pprint (sumo/get client "bucket" "key"))
+({:value "hello, sumo!",
+  :metadata {},
+  :last-modified #<Date Sun Dec 18 20:40:03 CST 2011>,
+  :vtag "6YWpgJW8WpnKlNTOeOxKZf",
+  :content-type "application/json",
+  :vector-clock
+  #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
 ```
 #
 ## License

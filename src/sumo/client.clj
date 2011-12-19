@@ -18,8 +18,8 @@
 ;; -------------------------------------------------------------------
 
 (ns sumo.client
-  (:require [sumo.serializers :as serializers])
   (:refer-clojure :exclude [get key])
+  (:use [sumo.serializers :only [serialize deserialize]])
   (:import (com.basho.riak.client.builders RiakObjectBuilder))
   (:import (com.basho.riak.pbc RiakClient))
   (:import (com.basho.riak.client.raw.pbc PBClientAdapter)))
@@ -39,8 +39,6 @@
     (assoc :vtag (.getVtag riak-object))
     (assoc :last-modified (.getLastModified riak-object))
     (assoc :metadata (into {} (.getMeta riak-object)))
-    ;; :value is currently only available
-    ;; as a byte-array
     (assoc :value (.getValue riak-object))))
 
 (defn- map-to-riak-object
@@ -70,22 +68,27 @@
   (let [result (.ping client)]
     (if (nil? result) true result)))
 
+(defn get-raw [client bucket key]
+  (let [results (.fetch client bucket key)
+        seq-results (map riak-object-to-map results)]
+    (if (seq seq-results) seq-results nil)))
+
 (defn get [client bucket key]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
   Usage looks like:
       (def results (sumo.client/get client \"bucket\" \"key\"))
       (println (:value (first (results))))"
-  (let [results (.fetch client bucket key)
-        des-fn #(assoc % :value (serializers/deserialize %))
-        mapfn (comp des-fn riak-object-to-map)
-        results-seq (map mapfn results)]
+  (let [results (get-raw client bucket key)
+        results-seq (map #(assoc % :value (deserialize %)) results)]
     (if (seq results-seq) results-seq nil)))
+
+(defn put-raw [client bucket key obj]
+  (let [riak-object (map-to-riak-object bucket key obj)]
+    (.store client riak-object)))
 
 (defn put [client bucket key obj]
   "Store an object into Riak.
   Usage looks like:
       (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
-  (let [serialized (serializers/serialize obj)
-        riak-object (assoc obj :value serialized)
-        riak-object (map-to-riak-object bucket key riak-object)]
-    (.store client riak-object)))
+  (let [new-obj (assoc obj :value (serialize obj))]
+    (put-raw client bucket key new-obj)))
