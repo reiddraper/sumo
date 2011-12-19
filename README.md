@@ -7,9 +7,11 @@
 (def client (sumo/connect))
 
 (sumo/ping client)
+true
 
 (sumo/put client "bucket" "key" {:content-type "application/json"
                                  :value "hello, sumo!"})
+nil
 
 ;; returns a lazy-seq of hashes
 (pprint (sumo/get client "bucket" "key"))
