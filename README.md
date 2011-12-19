@@ -7,21 +7,21 @@
 (def client (sumo/connect))
 
 (sumo/ping client)
-true
+; => true
 
 (sumo/put client "bucket" "key" {:content-type "application/json"
                                  :value "hello, sumo!"})
-nil
+; => nil
 
 ;; returns a lazy-seq of hashes
 (pprint (sumo/get client "bucket" "key"))
-({:value "hello, sumo!",
-  :metadata {},
-  :last-modified #<Date Sun Dec 18 20:40:03 CST 2011>,
-  :vtag "6YWpgJW8WpnKlNTOeOxKZf",
-  :content-type "application/json",
-  :vector-clock
-  #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
+; =>({:value "hello, sumo!",
+;     :metadata {},
+;     :last-modified #<Date Sun Dec 18 20:40:03 CST 2011>,
+;     :vtag "6YWpgJW8WpnKlNTOeOxKZf",
+;     :content-type "application/json",
+;     :vector-clock
+;     #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
 ```
 #
 ## License
