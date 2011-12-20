@@ -8,21 +8,25 @@
 (def client (sumo/connect))
 
 (sumo/ping client)
-; => true
+;; => true
 
 (sumo/put client "bucket" "key" {:content-type "application/json"
                                  :value "hello, sumo!"})
-; => nil
+;; => nil
 
 ;; returns a lazy-seq of hashes
 (pp/pprint (sumo/get client "bucket" "key"))
-; => ({:value "hello, sumo!",
-;      :metadata {},
-;      :last-modified #<Date Sun Dec 18 20:40:03 CST 2011>,
-;      :vtag "6YWpgJW8WpnKlNTOeOxKZf",
-;      :content-type "application/json",
-;      :vector-clock
-;      #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
+;; => ({:value "hello, sumo!",
+;;      :metadata {},
+;;      :last-modified #<Date Sun Dec 18 20:40:03 CST 2011>,
+;;      :vtag "6YWpgJW8WpnKlNTOeOxKZf",
+;;      :content-type "application/json",
+;;      :vector-clock
+;;      #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
+
+;; you can also pass in an options
+;; hash for a get request
+(sumo/get client "bucket" "key" {:r 2 :head true}))
 ```
 #
 ## License

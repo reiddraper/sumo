@@ -18,14 +18,42 @@
 ;; -------------------------------------------------------------------
 
 (ns sumo.client
-  (:refer-clojure :exclude [get key])
+  (:refer-clojure :exclude [get key pr])
   (:use [sumo.serializers :only [serialize deserialize]])
   (:import (com.basho.riak.client.builders RiakObjectBuilder))
   (:import (com.basho.riak.pbc RiakClient))
+  (:import (com.basho.riak.client.raw FetchMeta))
   (:import (com.basho.riak.client.raw.pbc PBClientAdapter)))
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
+
+(defn get-as-integer
+  [key container]
+    (if-let [i (key container)]
+      (Integer. i)))
+
+(defn- fetch-options
+  [options]
+  ;TODO
+  ; assert there are no extra
+  ; keys in options, as this helps
+  ; prevent things like misspelling
+  ; :basic-quorom ;)
+  (let [r (get-as-integer :r options)
+        pr (get-as-integer :pr options)
+        notfound-ok (:notfound-ok options)
+        basic-quorum (:basic-quorum options)
+        head (:head options)]
+        ; %TODO
+        ; add:
+        ; * return-deleted-vlock
+        ; * ifmodifiedvclock
+        ; * ifmodifiedsince
+  (FetchMeta. r, pr, notfound-ok,
+              basic-quorum, head,
+              nil, nil, nil)))
+
 
 (defn- riak-object-to-map
   "Turn an IRiakObject implementation into
@@ -68,16 +96,19 @@
   (let [result (.ping client)]
     (if (nil? result) true result)))
 
-(defn get-raw [client bucket key]
-  (let [results (.fetch client bucket key)]
+(defn get-raw [client bucket key & options]
+  (let [options (or (first options) {})
+        fetch-meta (fetch-options options)
+        results (.fetch client bucket key fetch-meta)]
     (map riak-object-to-map results)))
 
-(defn get [client bucket key]
+(defn get [client bucket key & options]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
   Usage looks like:
       (def results (sumo.client/get client \"bucket\" \"key\"))
       (println (:value (first (results))))"
-  (let [results (get-raw client bucket key)]
+  (let [options (or (first options) {})
+        results (get-raw client bucket key options)]
     (map #(assoc % :value (deserialize %)) results)))
 
 (defn put-raw [client bucket key obj]

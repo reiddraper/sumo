@@ -10,6 +10,13 @@
 (deftest get-missing
   (is (nil? (seq (client/get c "does-not-exist" "does-not-exist")))))
 
+(deftest get-head
+  (client/put c "test-bucket" "get-head" {:content-type "text/plain"
+                                          :value "get-head test"})
+  (is (= (:value (first
+                   (client/get c "test-bucket" "get-head" {:head true})))
+          "")))
+
 (deftest put-get-json
   (is (let [obj {:content-type "application/json"
                  :value [1 "2" '(3)]}]
