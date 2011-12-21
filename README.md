@@ -27,6 +27,12 @@
 ;; you can also pass in an options
 ;; hash for a get request
 (sumo/get client "bucket" "key" {:r 2 :head true}))
+
+;; you can also pass in an options
+;; hash for put operations
+(sc/put c "bucket" "key" {:content-type "text/plain" :value "hey there"} {:w 3 :return-body true})
+;; which returns a list of values just
+;; like sc/get does
 ```
 #
 ## License

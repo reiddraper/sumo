@@ -22,7 +22,7 @@
   (:use [sumo.serializers :only [serialize deserialize]])
   (:import (com.basho.riak.client.builders RiakObjectBuilder))
   (:import (com.basho.riak.pbc RiakClient))
-  (:import (com.basho.riak.client.raw FetchMeta))
+  (:import (com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta))
   (:import (com.basho.riak.client.raw.pbc PBClientAdapter)))
 
 (def ^{:private true} default-host "127.0.0.1")
@@ -35,24 +35,34 @@
 
 (defn- fetch-options
   [options]
-  ;TODO
-  ; assert there are no extra
-  ; keys in options, as this helps
-  ; prevent things like misspelling
-  ; :basic-quorom ;)
   (let [r (get-as-integer :r options)
         pr (get-as-integer :pr options)
         notfound-ok (:notfound-ok options)
         basic-quorum (:basic-quorum options)
         head (:head options)]
-        ; %TODO
-        ; add:
-        ; * return-deleted-vlock
-        ; * ifmodifiedvclock
-        ; * ifmodifiedsince
   (FetchMeta. r, pr, notfound-ok,
               basic-quorum, head,
               nil, nil, nil)))
+
+(defn- store-options
+  [options]
+  (let [w (get-as-integer :w options)
+        dw (get-as-integer :dw options)
+        pw (get-as-integer :pw options)
+        return-body (:return-body options)]
+  (StoreMeta. w, dw, pw, return-body,
+              nil, nil)))
+
+(defn- delete-options
+  [options]
+  (let [r (get-as-integer :r options)
+        pr (get-as-integer :pr options)
+        w (get-as-integer :w options)
+        dw (get-as-integer :dw options)
+        pw (get-as-integer :pw options)
+        rw (get-as-integer :rw options)
+        vclock (:vclock options)]
+  (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
 
 
 (defn- riak-object-to-map
@@ -111,13 +121,18 @@
         results (get-raw client bucket key options)]
     (map #(assoc % :value (deserialize %)) results)))
 
-(defn put-raw [client bucket key obj]
-  (let [riak-object (map-to-riak-object bucket key obj)]
-    (.store client riak-object)))
+(defn put-raw [client bucket key obj & options]
+  (let [options (or (first options) {})
+        riak-object (map-to-riak-object bucket key obj)
+        store-meta (store-options options)
+        results (.store client riak-object store-meta)]
+    (map riak-object-to-map results)))
 
-(defn put [client bucket key obj]
+(defn put [client bucket key obj & options]
   "Store an object into Riak.
   Usage looks like:
       (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
-  (let [new-obj (assoc obj :value (serialize obj))]
-    (put-raw client bucket key new-obj)))
+  (let [options (or (first options) {})
+        new-obj (assoc obj :value (serialize obj))
+        results (put-raw client bucket key new-obj options)]
+    (map #(assoc % :value (deserialize %)) results)))
