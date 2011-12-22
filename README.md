@@ -73,6 +73,8 @@ along with some ideas for a higher level interface.
 These are just some ideas we've been playing
 around with for how the high-level API might look:
 
+Apply a series of forms to whatever
+value is currently stored at `bucket`, `key`:
 
 ```clojure
 ;; Apply a form to the
@@ -85,6 +87,34 @@ around with for how the high-level API might look:
   ;; as the second value,
   ;; much like (-> obj (..) (..))
   (assoc-in [:value] inc))
+```
+
+The next idea is an ODM of sorts that supports
+automatic conflict-resolution of your domain objects
+but letting you construct them from [knockbox](http://github.com/reiddraper/knockbox)
+data types.
+
+```clojure
+(defbox Account
+  ;; the second item in the
+  ;; list is a type or protocol
+  ;; to restrict the value to
+  (:name       LWWRegister :required true)
+  (:address    LWWRegister :required true)
+  ;; specify a default value for this field,
+  ;; in this case, the result of calling the
+  ;; function `lww-set`
+  (:followers  ObservedRemoveSet :default (lww-set)))
+
+(def person (Account.))
+
+(-> person
+  ;; add :bar to the followers list
+  (update-in [:followers] conj :bar)
+  ;; set the name
+  (assoc-in  [:name]      "Reid")
+  ;; set the address
+  (assoc-in  [:address]   "27 Lexington Ave"))
 ```
 
 ## License
