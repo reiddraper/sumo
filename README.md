@@ -53,7 +53,40 @@ To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `project
 ;; which returns a list of values just
 ;; like sc/get does
 ```
-#
+
+## Roadmap
+
+sumo currently just supports basic key/value access. The following is a TODO list of sorts
+along with some ideas for a higher level interface.
+
+### TODO
+
+* multi-client connections
+* http connections (sumo is currently just protocol buffers)
+* 2i
+* mapreduce
+* links
+* search
+
+### Higher-level interface ideas
+
+These are just some ideas we've been playing
+around with for how the high-level API might look:
+
+
+```clojure
+;; Apply a form to the
+;; current value at `key`,
+;; and resave. Similar to Mutations
+;; in the Java client
+(send-riak "bucket "key"
+  ;; your form will be called
+  ;; threading in the obj
+  ;; as the second value,
+  ;; much like (-> obj (..) (..))
+  (assoc-in [:value] inc))
+```
+
 ## License
 Copyright (c) 2011 Basho Technologies, Inc.  All Rights Reserved.
 
