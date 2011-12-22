@@ -17,6 +17,8 @@ After this, run:
 lein deps
 ```
 
+To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `projects.clj`.
+
 ## Usage
 ```clojure
 (require '[sumo.client :as sumo]
