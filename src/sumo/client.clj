@@ -136,3 +136,9 @@
         new-obj (assoc obj :value (serialize obj))
         results (put-raw client bucket key new-obj options)]
     (map #(assoc % :value (deserialize %)) results)))
+
+(defn delete [client bucket key & options]
+  (let [options (or (first options) {})
+        delete-meta (delete-options options)]
+    (.delete client bucket key delete-meta)))
+
