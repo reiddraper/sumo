@@ -140,5 +140,6 @@
 (defn delete [client bucket key & options]
   (let [options (or (first options) {})
         delete-meta (delete-options options)]
-    (.delete client bucket key delete-meta)))
+    (.delete client bucket key delete-meta))
+    true)
 
