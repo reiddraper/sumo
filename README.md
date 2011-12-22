@@ -79,7 +79,7 @@ around with for how the high-level API might look:
 ;; current value at `key`,
 ;; and resave. Similar to Mutations
 ;; in the Java client
-(send-riak "bucket "key"
+(send-riak "bucket" "key"
   ;; your form will be called
   ;; threading in the obj
   ;; as the second value,
