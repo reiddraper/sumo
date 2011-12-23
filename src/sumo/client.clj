@@ -72,7 +72,7 @@
   ;; TODO
   ;; add support for 2i
   (-> {}
-    (assoc :vector-clock (.getVClock riak-object))
+    (assoc :vector-clock (.getBytes (.getVClock riak-object)))
     (assoc :content-type (.getContentType riak-object))
     (assoc :vtag (.getVtag riak-object))
     (assoc :last-modified (.getLastModified riak-object))
@@ -83,12 +83,14 @@
   "Construct a DefaultRiakObject from
   a `bucket` `key` and `obj` map"
   [bucket key obj]
-  (-> (RiakObjectBuilder/newBuilder bucket key)
-    (.withValue (:value obj))
-    (.withContentType (:content-type obj))
-    (.withVClock (:vector-clock obj))
-    (.withUsermeta (:metadata obj {}))
-    (.build)))
+  (let [vclock (:vector-clock obj)
+        riak-object (-> (RiakObjectBuilder/newBuilder bucket key)
+                      (.withValue (:value obj))
+                      (.withContentType (:content-type obj))
+                      (.withUsermeta (:metadata obj {})))]
+    (if vclock
+      (.build (.withValue riak-object vclock))
+      (.build riak-object))))
 
 (defn connect
   "Return a connection. With no arguments,
