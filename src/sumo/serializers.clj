@@ -62,7 +62,7 @@
 
 (defmethod deserialize "text/plain"
   [{value :value}]
-  (String. value))
+  (String. ^bytes value))
 
 (defmethod deserialize "application/clojure"
   [{value :value}]
