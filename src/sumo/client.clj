@@ -30,8 +30,8 @@
 
 (defn get-as-integer
   [key container]
-    (if-let [i (key container)]
-      (Integer. i)))
+  (if-let [i (key container)]
+    (Integer. i)))
 
 (defn- fetch-options
   [options]
@@ -40,9 +40,9 @@
         notfound-ok (:notfound-ok options)
         basic-quorum (:basic-quorum options)
         head (:head options)]
-  (FetchMeta. r, pr, notfound-ok,
-              basic-quorum, head,
-              nil, nil, nil)))
+    (FetchMeta. r, pr, notfound-ok,
+                basic-quorum, head,
+                nil, nil, nil)))
 
 (defn- store-options
   [options]
@@ -50,8 +50,8 @@
         dw (get-as-integer :dw options)
         pw (get-as-integer :pw options)
         return-body (:return-body options)]
-  (StoreMeta. w, dw, pw, return-body,
-              nil, nil)))
+    (StoreMeta. w, dw, pw, return-body,
+                nil, nil)))
 
 (defn- delete-options
   [options]
@@ -62,7 +62,7 @@
         pw (get-as-integer :pw options)
         rw (get-as-integer :rw options)
         vclock (:vclock options)]
-  (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
+    (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
 
 
 (defn- riak-object-to-map
@@ -99,8 +99,8 @@
   ([] (connect default-host
                default-port))
   ([host port]
-     (PBClientAdapter.
-      (RiakClient. host port))))
+   (PBClientAdapter.
+     (RiakClient. host port))))
 
 (defn ping
   "Returns true or raises ConnectException"
@@ -117,8 +117,8 @@
 (defn get [client bucket key & options]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
   Usage looks like:
-      (def results (sumo.client/get client \"bucket\" \"key\"))
-      (println (:value (first (results))))"
+  (def results (sumo.client/get client \"bucket\" \"key\"))
+  (println (:value (first (results))))"
   (let [options (or (first options) {})
         results (get-raw client bucket key options)]
     (map #(assoc % :value (deserialize %)) results)))
@@ -133,7 +133,7 @@
 (defn put [client bucket key obj & options]
   "Store an object into Riak.
   Usage looks like:
-      (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
+  (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
   (let [options (or (first options) {})
         new-obj (assoc obj :value (serialize obj))
         results (put-raw client bucket key new-obj options)]
@@ -143,5 +143,5 @@
   (let [options (or (first options) {})
         delete-meta (delete-options options)]
     (.delete client bucket key delete-meta))
-    true)
+  true)
 

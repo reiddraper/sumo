@@ -15,7 +15,7 @@
                                           :value "get-head test"})
   (is (= (:value (first
                    (client/get c "test-bucket" "get-head" {:head true})))
-          "")))
+         "")))
 
 (deftest put-get-json
   (is (let [obj {:content-type "application/json"
