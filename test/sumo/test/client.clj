@@ -5,7 +5,7 @@
 (def c (client/connect))
 
 (deftest connect-and-ping
-  (client/ping c))
+  (is (client/ping c)))
 
 (deftest get-missing
   (is (nil? (seq (client/get c "does-not-exist" "does-not-exist")))))
