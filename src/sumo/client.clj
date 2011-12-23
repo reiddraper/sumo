@@ -20,10 +20,11 @@
 (ns sumo.client
   (:refer-clojure :exclude [get key pr])
   (:use [sumo.serializers :only [serialize deserialize]])
-  (:import (com.basho.riak.client.builders RiakObjectBuilder))
-  (:import (com.basho.riak.pbc RiakClient))
-  (:import (com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta))
-  (:import (com.basho.riak.client.raw.pbc PBClientAdapter)))
+  (:import [com.basho.riak.client.builders RiakObjectBuilder]
+           [com.basho.riak.pbc RiakClient]
+           [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta RawClient]
+           [com.basho.riak.client.raw.pbc PBClientAdapter]
+           [com.basho.riak.client IRiakObject]))
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
@@ -68,7 +69,7 @@
 (defn- riak-object-to-map
   "Turn an IRiakObject implementation into
   a Clojure map"
-  [riak-object]
+  [^IRiakObject riak-object]
   ;; TODO
   ;; add support for 2i
   (-> {}
@@ -79,12 +80,12 @@
     (assoc :metadata (into {} (.getMeta riak-object)))
     (assoc :value (.getValue riak-object))))
 
-(defn- map-to-riak-object
+(defn- ^IRiakObject map-to-riak-object
   "Construct a DefaultRiakObject from
   a `bucket` `key` and `obj` map"
   [bucket key obj]
   (let [vclock (:vector-clock obj)
-        riak-object (-> (RiakObjectBuilder/newBuilder bucket key)
+        ^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
                       (.withValue (:value obj))
                       (.withContentType (:content-type obj))
                       (.withUsermeta (:metadata obj {})))]
@@ -98,23 +99,23 @@
   at the default protocol buffers port"
   ([] (connect default-host
                default-port))
-  ([host port]
+  ([^String host ^long port]
    (PBClientAdapter.
      (RiakClient. host port))))
 
 (defn ping
   "Returns true or raises ConnectException"
-  [client]
+  [^RawClient client]
   (let [result (.ping client)]
     (if (nil? result) true result)))
 
-(defn get-raw [client bucket key & options]
+(defn get-raw [^RawClient client bucket key & options]
   (let [options (or (first options) {})
         fetch-meta (fetch-options options)
-        results (.fetch client bucket key fetch-meta)]
+        results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
     (map riak-object-to-map results)))
 
-(defn get [client bucket key & options]
+(defn get [^RawClient client bucket key & options]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
   Usage looks like:
   (def results (sumo.client/get client \"bucket\" \"key\"))
@@ -123,14 +124,14 @@
         results (get-raw client bucket key options)]
     (map #(assoc % :value (deserialize %)) results)))
 
-(defn put-raw [client bucket key obj & options]
+(defn put-raw [^RawClient client bucket key obj & options]
   (let [options (or (first options) {})
         riak-object (map-to-riak-object bucket key obj)
         store-meta (store-options options)
-        results (.store client riak-object store-meta)]
+        results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
     (map riak-object-to-map results)))
 
-(defn put [client bucket key obj & options]
+(defn put [^RawClient client bucket key obj & options]
   "Store an object into Riak.
   Usage looks like:
   (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
@@ -139,9 +140,9 @@
         results (put-raw client bucket key new-obj options)]
     (map #(assoc % :value (deserialize %)) results)))
 
-(defn delete [client bucket key & options]
+(defn delete [^RawClient client bucket key & options]
   (let [options (or (first options) {})
         delete-meta (delete-options options)]
-    (.delete client bucket key delete-meta))
+    (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
 
