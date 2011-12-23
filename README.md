@@ -1,5 +1,9 @@
 # sumo
 
+## Build status
+
+[![Build Status](https://secure.travis-ci.org/reiddraper/sumo.png)](http://travis-ci.org/reiddraper/sumo)
+
 ## Dependencies
 
 sumo currently relies on a development version of the
