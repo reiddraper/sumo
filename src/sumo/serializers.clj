@@ -56,8 +56,9 @@
 
 (defmethod deserialize "application/json"
   [{value :value}]
-  (json/parse-string (String. value))) ; TODO: Having to turn the byte
-                                       ; array into a String seems wrong?
+  ; TODO: Having to turn the byte
+  ; array into a String seems wrong?
+  (json/parse-string (String. value)))
 
 (defmethod deserialize "text/plain"
   [{value :value}]
