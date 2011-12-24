@@ -6,17 +6,6 @@
 
 ## Dependencies
 
-sumo currently relies on a development version of the
-Riak Java client. To get this version:
-
-```
-git clone git@github.com:basho/riak-java-client.git
-cd riak-java-client
-mvn install
-```
-
-After this, run:
-
 ```
 lein deps
 ```
