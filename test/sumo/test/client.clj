@@ -11,11 +11,13 @@
   (is (nil? (seq (client/get c "does-not-exist" "does-not-exist")))))
 
 (deftest get-head
-  (client/put c "test-bucket" "get-head" {:content-type "text/plain"
-                                          :value "get-head test"})
-  (is (= (:value (first
-                   (client/get c "test-bucket" "get-head" {:head true})))
-         "")))
+  (let [bucket "test-bucket"
+        key    "get-head"
+        value  "get-head test"]
+    (client/put c bucket key {:content-type "text/plain"
+                              :value value})
+    (is (= (:value (first (client/get c bucket key :head true)))
+           value))))
 
 (deftest put-get-json
   (is (let [obj {:content-type "application/json"
