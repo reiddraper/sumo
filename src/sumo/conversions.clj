@@ -18,17 +18,18 @@
 ;; -------------------------------------------------------------------
 
 (ns sumo.conversions
-  (:import [com.basho.riak.client.builders RiakObjectBuilder]
+  (:import [clojure.lang IPersistentMap]
+           [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.client IRiakObject]))
 
-(defn riak-object-to-map
+(defn ^IPersistentMap riak-object-to-map
   "Turn an IRiakObject implementation into
   a Clojure map"
   [^IRiakObject riak-object]
   ;; TODO
   ;; add support for 2i
   (-> {}
-    (assoc :vector-clock (.getBytes (.getVClock riak-object)))
+    (assoc :vector-clock (.. riak-object getVClock getBytes))
     (assoc :content-type (.getContentType riak-object))
     (assoc :vtag (.getVtag riak-object))
     (assoc :last-modified (.getLastModified riak-object))

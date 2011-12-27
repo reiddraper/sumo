@@ -84,9 +84,13 @@
         results (put-raw client bucket key new-obj options)]
     (map #(assoc % :value (deserialize %)) results)))
 
-(defn delete [^RawClient client bucket key & options]
+(defn delete
+  [^RawClient client ^String  bucket ^String key &{:keys [r pr w dw pw rw vclock] :as options}]
   (let [options (or (first options) {})
         delete-meta (delete-options options)]
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
 
+(defn list-keys
+  [^RawClient client ^String bucket &{:keys [r pr notfound-ok basic-quorum head] :as options}]
+  (seq (.listKeys client bucket)))
