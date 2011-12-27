@@ -29,7 +29,7 @@
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
-(defn get-as-integer
+(defn- get-as-integer
   [key container]
   (if-let [i (key container)]
     (Integer. i)))
