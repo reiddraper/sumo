@@ -19,7 +19,8 @@
 
 (ns sumo.client
   (:refer-clojure :exclude [get key pr])
-  (:use [sumo.serializers :only [serialize deserialize]])
+  (:use [sumo.serializers :only [serialize deserialize]]
+        [clojure.set :only [union]])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.pbc RiakClient]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta RawClient]
@@ -29,14 +30,14 @@
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
-(defn get-as-integer
+(defn- get-as-integer
   [key container]
   (if-let [i (key container)]
     (Integer. i)))
 
 (defn- fetch-options
   [options]
-  (let [r (get-as-integer :r options)
+  (let [r  (get-as-integer :r options)
         pr (get-as-integer :pr options)
         notfound-ok (:notfound-ok options)
         basic-quorum (:basic-quorum options)
@@ -47,7 +48,7 @@
 
 (defn- store-options
   [options]
-  (let [w (get-as-integer :w options)
+  (let [w  (get-as-integer :w options)
         dw (get-as-integer :dw options)
         pw (get-as-integer :pw options)
         return-body (:return-body options)]
@@ -56,29 +57,48 @@
 
 (defn- delete-options
   [options]
-  (let [r (get-as-integer :r options)
+  (let [r  (get-as-integer :r options)
         pr (get-as-integer :pr options)
-        w (get-as-integer :w options)
+        w  (get-as-integer :w options)
         dw (get-as-integer :dw options)
         pw (get-as-integer :pw options)
         rw (get-as-integer :rw options)
         vclock (:vclock options)]
     (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
 
+(defn- riak-indexes-to-map
+  "Converts a seq of Riak Indexes into a hash of sets. The seq could
+   define two indexes named 'foo', one binary and one integer, so we
+   must be careful to add duplicates to the set rather than overriding
+   the first values."
+  [indexes]
+  (let [add-or-new-set (fn [prev val]
+                         (if (nil? prev) val (union prev val)))
+        add-index (fn [map name val]
+                    (update-in map [name] add-or-new-set val))]
+    (loop [index-seq indexes index-map {}]
+      (if (seq index-seq)
+        (let [index (first index-seq)
+              index-map (add-index index-map
+                                   (keyword (.getName (.getKey index)))
+                                   (set (.getValue index)))]
+          (recur (rest index-seq) index-map))
+        index-map))))
 
 (defn- riak-object-to-map
   "Turn an IRiakObject implementation into
   a Clojure map"
   [^IRiakObject riak-object]
-  ;; TODO
-  ;; add support for 2i
   (-> {}
-    (assoc :vector-clock (.getBytes (.getVClock riak-object)))
-    (assoc :content-type (.getContentType riak-object))
-    (assoc :vtag (.getVtag riak-object))
-    (assoc :last-modified (.getLastModified riak-object))
-    (assoc :metadata (into {} (.getMeta riak-object)))
-    (assoc :value (.getValue riak-object))))
+      (assoc :vector-clock (.getBytes (.getVClock riak-object)))
+      (assoc :content-type (.getContentType riak-object))
+      (assoc :vtag (.getVtag riak-object))
+      (assoc :last-modified (.getLastModified riak-object))
+      (assoc :metadata (into {} (.getMeta riak-object)))
+      (assoc :value (.getValue riak-object))
+      (assoc :indexes (riak-indexes-to-map
+                       (concat (seq (.allBinIndexes riak-object))
+                               (seq (.allIntIndexes riak-object)))))))
 
 (defn- ^IRiakObject map-to-riak-object
   "Construct a DefaultRiakObject from
@@ -89,6 +109,9 @@
                       (.withValue (:value obj))
                       (.withContentType (:content-type obj))
                       (.withUsermeta (:metadata obj {})))]
+    (doseq [[index-name index-seq] (:indexes obj)]
+      (doseq [index-value index-seq]
+        (.addIndex riak-object (name index-name) index-value)))
     (if vclock
       (.build (.withValue riak-object vclock))
       (.build riak-object))))
