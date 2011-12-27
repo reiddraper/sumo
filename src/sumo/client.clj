@@ -26,6 +26,7 @@
            [com.basho.riak.client.raw.pbc PBClientAdapter]
            [com.basho.riak.client IRiakObject]))
 
+(def ^:dynamic debug false)
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
@@ -64,7 +65,6 @@
         rw (get-as-integer :rw options)
         vclock (:vclock options)]
     (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
-
 
 (defn- riak-object-to-map
   "Turn an IRiakObject implementation into
@@ -113,6 +113,7 @@
   (let [options (or (first options) {})
         fetch-meta (fetch-options options)
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
+    (if debug (println (format "Fetching %s/%s with %s" bucket key options)))
     (map riak-object-to-map results)))
 
 (defn get [^RawClient client bucket key & options]
@@ -129,6 +130,7 @@
         riak-object (map-to-riak-object bucket key obj)
         store-meta (store-options options)
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
+    (if debug (println (format "Storing %s/%s with %s" bucket key options)))
     (map riak-object-to-map results)))
 
 (defn put [^RawClient client bucket key obj & options]
@@ -143,6 +145,6 @@
 (defn delete [^RawClient client bucket key & options]
   (let [options (or (first options) {})
         delete-meta (delete-options options)]
+    (if debug (println (format "Deleting %s/%s with %s" bucket key options)))
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
-
