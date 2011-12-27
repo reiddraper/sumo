@@ -36,7 +36,7 @@
 
 (defn- fetch-options
   [options]
-  (let [r (get-as-integer :r options)
+  (let [r  (get-as-integer :r options)
         pr (get-as-integer :pr options)
         notfound-ok (:notfound-ok options)
         basic-quorum (:basic-quorum options)
@@ -47,7 +47,7 @@
 
 (defn- store-options
   [options]
-  (let [w (get-as-integer :w options)
+  (let [w  (get-as-integer :w options)
         dw (get-as-integer :dw options)
         pw (get-as-integer :pw options)
         return-body (:return-body options)]
@@ -56,9 +56,9 @@
 
 (defn- delete-options
   [options]
-  (let [r (get-as-integer :r options)
+  (let [r  (get-as-integer :r options)
         pr (get-as-integer :pr options)
-        w (get-as-integer :w options)
+        w  (get-as-integer :w options)
         dw (get-as-integer :dw options)
         pw (get-as-integer :pw options)
         rw (get-as-integer :rw options)
