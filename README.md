@@ -22,11 +22,17 @@ To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `project
 (sumo/ping client)
 ;; => true
 
-(sumo/put client "bucket" "key" {:content-type "application/json"
+(sumo/put client "bucket" "key" {:value "hello, sumo!"})
+;; => nil
+
+;; sumo will default to "application/json" content-type and serialization
+;; you can override this by setting it in the object hash-map
+(sumo/put client "bucket" "key" {:content-type "text/plain"
                                  :value "hello, sumo!"})
 ;; => nil
 
-;; returns a lazy-seq of hashes
+
+;; returns a lazy-seq of hash-maps
 (pp/pprint (sumo/get client "bucket" "key"))
 ;; => ({:value "hello, sumo!",
 ;;      :metadata {},
@@ -36,15 +42,18 @@ To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `project
 ;;      :vector-clock
 ;;      #<BasicVClock com.basho.riak.client.cap.BasicVClock@50aec4>})
 
-;; you can also pass in an options
-;; hash for a get request
+;; you can also pass an options hash-map into requests
+;; for example, to use an R value of 2 and only return the object metadata
 (sumo/get client "bucket" "key" {:r 2 :head true}))
 
-;; you can also pass in an options
-;; hash for put operations
-(sc/put client "bucket" "key" {:content-type "text/plain" :value "hey there"} {:w 3 :return-body true})
-;; which returns a list of values just
-;; like sc/get does
+;; or to use a W value of 3 and return a lazy-seq of hash-maps just like sumo/get
+(sumo/put client "bucket" "key" {:value "hey there"}
+                                {:w 3 :return-body true})
+
+;; you can store secondary indexes by adding an :indexes hash-map containing
+;; keywords as keys and sets as values to your object
+(sumo/put client "bucket" "key" {:value {:name "John" :email "john@example.com"}
+                                 :indexes {:email #{"john@example.com"}})
 ```
 
 ## Roadmap
@@ -56,7 +65,7 @@ along with some ideas for a higher level interface.
 
 * multi-client connections
 * http connections (sumo is currently just protocol buffers)
-* 2i
+* 2i queries
 * mapreduce
 * links
 * search
