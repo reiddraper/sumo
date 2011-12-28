@@ -26,6 +26,13 @@
     (is (= (:value obj)
            (:value (first get-ret))))))
 
+(deftest put-get-json-default
+  (let [obj {:value [1 "2" '(3)]}
+        put-ret (client/put c "test-bucket" "test-key" obj)
+        get-ret (client/get c "test-bucket" "test-key")]
+    (is (= (:value obj)
+           (:value (first get-ret))))))
+
 (deftest put-get-indexes
   (let [indexes {:a #{1 "binary"}
                  :b #{2}}

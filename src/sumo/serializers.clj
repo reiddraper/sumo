@@ -22,6 +22,10 @@
 
 (defmulti serialize :content-type)
 
+(defmethod serialize nil
+  [obj]
+  (serialize (assoc obj :content-type "application/json")))
+
 (defmethod serialize :default
   [{content-type :content-type value :value}]
   (throw (Exception. (str "No serializer for content-type: " content-type))))

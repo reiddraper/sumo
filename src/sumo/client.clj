@@ -107,7 +107,8 @@
   (let [vclock (:vector-clock obj)
         ^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
                       (.withValue (:value obj))
-                      (.withContentType (:content-type obj))
+                      (.withContentType (or (:content-type obj)
+                                            "application/json"))
                       (.withUsermeta (:metadata obj {})))]
     (doseq [[index-name index-seq] (:indexes obj)]
       (doseq [index-value index-seq]
