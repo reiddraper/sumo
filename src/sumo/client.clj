@@ -176,33 +176,32 @@
 (defn- create-index [index-name start]
   (let [str-name (name index-name)]
     (cond
-      (instance? String start) (BinIndex/named str-name)
-      ; TODO we should check for something
-      ; more general than Long here
-      (instance? Long start) (IntIndex/named str-name))))
+      (string? start) (BinIndex/named str-name)
+      (number? start) (IntIndex/named str-name))))
 
 (defn- create-index-query
   [bucket index-name value-or-range]
-  (cond
-    (instance? clojure.lang.IPersistentVector value-or-range) 
+  (if (vector? value-or-range)
     (let [start (clojure.core/get value-or-range 0)
-          end (clojure.core/get value-or-range 1)]
+          end   (clojure.core/get value-or-range 1)]
       (cond
-        (instance? String start) (BinRangeQuery. (create-index index-name start) bucket start end)
-        (instance? Long start) (IntRangeQuery. (create-index index-name start) bucket (Integer. start) (Integer. end))))
+       (string? start)
+       (BinRangeQuery.
+        (create-index index-name start) bucket start end)
+       (number? start)
+       (IntRangeQuery.
+        (create-index index-name start) bucket (Integer. start) (Integer. end))))
     ; single value
-    true
     (let [value value-or-range]
       (cond
-        (instance? String value)
-        (BinValueQuery. (create-index index-name value) bucket value)
-        (instance? Long value)
-        (IntValueQuery. (create-index index-name value) bucket (Integer. value))))))
+       (string? value)
+       (BinValueQuery.
+        (create-index index-name value) bucket value)
+       (number? value)
+       (IntValueQuery.
+        (create-index index-name value) bucket (Integer. value))))))
 
-(defn index-query [^RawClient client
-                   bucket
-                   index-name
-                   value-or-range]
+(defn index-query [^RawClient client bucket index-name value-or-range]
   (let [str-name (name index-name)
         query (create-index-query bucket index-name value-or-range)]
     (seq (.fetchIndex client query))))
