@@ -57,10 +57,11 @@ To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `project
 
 ;; querying secondary indexes is supported as well
 (sumo/index-query client "bucket" :email "john@example.com")
-; search for a range
-(sumo/index-query client "bucket" :email "i" "k")
 
-; or an integer
+; search for a range of strings
+(sumo/index-query client "bucket" :email ["i" "k"])
+
+; or of integers
 (sumo/index-query client "bucket" :age [21 80])
 ```
 
