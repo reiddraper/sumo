@@ -54,6 +54,14 @@ To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `project
 ;; keywords as keys and sets as values to your object
 (sumo/put client "bucket" "key" {:value {:name "John" :email "john@example.com"}
                                  :indexes {:email #{"john@example.com"}})
+
+;; querying secondary indexes is supported as well
+(sumo/index-query client "bucket" :email "john@example.com")
+; search for a range
+(sumo/index-query client "bucket" :email "i" "k")
+
+; or an integer
+(sumo/index-query client "bucket" :age [21 80])
 ```
 
 ## Roadmap
