@@ -25,7 +25,10 @@
            [com.basho.riak.pbc RiakClient]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta RawClient]
            [com.basho.riak.client.raw.pbc PBClientAdapter]
-           [com.basho.riak.client IRiakObject]))
+           [com.basho.riak.client IRiakObject]
+           [com.basho.riak.client.query.indexes BinIndex IntIndex]
+           [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery
+            IntValueQuery IntRangeQuery]))
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
@@ -68,9 +71,9 @@
 
 (defn- riak-indexes-to-map
   "Converts a seq of Riak Indexes into a hash of sets. The seq could
-   define two indexes named 'foo', one binary and one integer, so we
-   must be careful to add duplicates to the set rather than overriding
-   the first values."
+  define two indexes named 'foo', one binary and one integer, so we
+  must be careful to add duplicates to the set rather than overriding
+  the first values."
   [indexes]
   (let [add-or-new-set (fn [prev val]
                          (if (nil? prev) val (union prev val)))
@@ -90,15 +93,15 @@
   a Clojure map"
   [^IRiakObject riak-object]
   (-> {}
-      (assoc :vector-clock (.getBytes (.getVClock riak-object)))
-      (assoc :content-type (.getContentType riak-object))
-      (assoc :vtag (.getVtag riak-object))
-      (assoc :last-modified (.getLastModified riak-object))
-      (assoc :metadata (into {} (.getMeta riak-object)))
-      (assoc :value (.getValue riak-object))
-      (assoc :indexes (riak-indexes-to-map
-                       (concat (seq (.allBinIndexes riak-object))
-                               (seq (.allIntIndexes riak-object)))))))
+    (assoc :vector-clock (.getBytes (.getVClock riak-object)))
+    (assoc :content-type (.getContentType riak-object))
+    (assoc :vtag (.getVtag riak-object))
+    (assoc :last-modified (.getLastModified riak-object))
+    (assoc :metadata (into {} (.getMeta riak-object)))
+    (assoc :value (.getValue riak-object))
+    (assoc :indexes (riak-indexes-to-map
+                      (concat (seq (.allBinIndexes riak-object))
+                              (seq (.allIntIndexes riak-object)))))))
 
 (defn- ^IRiakObject map-to-riak-object
   "Construct a DefaultRiakObject from
@@ -106,10 +109,10 @@
   [bucket key obj]
   (let [vclock (:vector-clock obj)
         ^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
-                      (.withValue (:value obj))
-                      (.withContentType (or (:content-type obj)
-                                            "application/json"))
-                      (.withUsermeta (:metadata obj {})))]
+                                         (.withValue (:value obj))
+                                         (.withContentType (or (:content-type obj)
+                                                               "application/json"))
+                                         (.withUsermeta (:metadata obj {})))]
     (doseq [[index-name index-seq] (:indexes obj)]
       (doseq [index-value index-seq]
         (.addIndex riak-object (name index-name) index-value)))
@@ -170,3 +173,36 @@
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
 
+(defn- create-index [index-name start]
+  (let [str-name (name index-name)]
+    (cond
+      (instance? String start) (BinIndex/named str-name)
+      ; TODO we should check for something
+      ; more general than Long here
+      (instance? Long start) (IntIndex/named str-name))))
+
+(defn- create-index-query
+  [bucket index-name value-or-range]
+  (cond
+    (instance? clojure.lang.IPersistentVector value-or-range) 
+    (let [start (clojure.core/get value-or-range 0)
+          end (clojure.core/get value-or-range 1)]
+      (cond
+        (instance? String start) (BinRangeQuery. (create-index index-name start) bucket start end)
+        (instance? Long start) (IntRangeQuery. (create-index index-name start) bucket (Integer. start) (Integer. end))))
+    ; single value
+    true
+    (let [value value-or-range]
+      (cond
+        (instance? String value)
+        (BinValueQuery. (create-index index-name value) bucket value)
+        (instance? Long value)
+        (IntValueQuery. (create-index index-name value) bucket (Integer. value))))))
+
+(defn index-query [^RawClient client
+                   bucket
+                   index-name
+                   value-or-range]
+  (let [str-name (name index-name)
+        query (create-index-query bucket index-name value-or-range)]
+    (seq (.fetchIndex client query))))
