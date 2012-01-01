@@ -181,23 +181,28 @@
       ; more general than Long here
       (instance? Long start) (IntIndex/named str-name))))
 
+(defn- create-index-query
+  [bucket index-name value-or-range]
+  (cond
+    (instance? clojure.lang.IPersistentVector value-or-range) 
+    (let [start (clojure.core/get value-or-range 0)
+          end (clojure.core/get value-or-range 1)]
+      (cond
+        (instance? String start) (BinRangeQuery. (create-index index-name start) bucket start end)
+        (instance? Long start) (IntRangeQuery. (create-index index-name start) bucket (Integer. start) (Integer. end))))
+    ; single value
+    true
+    (let [value value-or-range]
+      (cond
+        (instance? String value)
+        (BinValueQuery. (create-index index-name value) bucket value)
+        (instance? Long value)
+        (IntValueQuery. (create-index index-name value) bucket (Integer. value))))))
+
 (defn index-query [^RawClient client
                    bucket
                    index-name
-                   start
-                   & end]
+                   value-or-range]
   (let [str-name (name index-name)
-        query (cond
-                (instance? String start) 
-                (let [index (BinIndex/named str-name)]
-                  (if (seq end)
-                    (BinRangeQuery. index bucket start (first end))
-                    (BinValueQuery. index bucket start)))
-                ; TODO we should check for something
-                ; more general than Long here
-                (instance? Long start)
-                (let [index (IntIndex/named str-name)]
-                  (if (seq end)
-                    (IntRangeQuery. index bucket (Integer. start) (Integer. (first end)))
-                    (IntValueQuery. index bucket (Integer. start)))))]
+        query (create-index-query bucket index-name value-or-range)]
     (seq (.fetchIndex client query))))

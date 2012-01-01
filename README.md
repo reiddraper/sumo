@@ -61,7 +61,7 @@ To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `project
 (sumo/index-query client "bucket" :email "i" "k")
 
 ; or an integer
-(sumo/index-query client "bucket" :age 21 80)
+(sumo/index-query client "bucket" :age [21 80])
 ```
 
 ## Roadmap
