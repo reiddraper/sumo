@@ -20,105 +20,16 @@
 (ns sumo.client
   (:refer-clojure :exclude [get key pr])
   (:use [sumo.serializers :only [serialize deserialize]]
-        [clojure.set :only [union]])
+        [clojure.set :only [union]]
+        [sumo.internal])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.pbc RiakClient]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta RawClient]
            [com.basho.riak.client.raw.pbc PBClientAdapter]
-           [com.basho.riak.client IRiakObject]
-           [com.basho.riak.client.query.indexes BinIndex IntIndex]
-           [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery
-            IntValueQuery IntRangeQuery]))
+           [com.basho.riak.client IRiakObject]))
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
-
-(defn- get-as-integer
-  [key container]
-  (if-let [i (key container)]
-    (Integer. i)))
-
-(defn- fetch-options
-  [options]
-  (let [r  (get-as-integer :r options)
-        pr (get-as-integer :pr options)
-        notfound-ok (:notfound-ok options)
-        basic-quorum (:basic-quorum options)
-        head (:head options)]
-    (FetchMeta. r, pr, notfound-ok,
-                basic-quorum, head,
-                nil, nil, nil)))
-
-(defn- store-options
-  [options]
-  (let [w  (get-as-integer :w options)
-        dw (get-as-integer :dw options)
-        pw (get-as-integer :pw options)
-        return-body (:return-body options)]
-    (StoreMeta. w, dw, pw, return-body,
-                nil, nil)))
-
-(defn- delete-options
-  [options]
-  (let [r  (get-as-integer :r options)
-        pr (get-as-integer :pr options)
-        w  (get-as-integer :w options)
-        dw (get-as-integer :dw options)
-        pw (get-as-integer :pw options)
-        rw (get-as-integer :rw options)
-        vclock (:vclock options)]
-    (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
-
-(defn- riak-indexes-to-map
-  "Converts a seq of Riak Indexes into a hash of sets. The seq could
-  define two indexes named 'foo', one binary and one integer, so we
-  must be careful to add duplicates to the set rather than overriding
-  the first values."
-  [indexes]
-  (let [add-or-new-set (fn [prev val]
-                         (if (nil? prev) val (union prev val)))
-        add-index (fn [map name val]
-                    (update-in map [name] add-or-new-set val))]
-    (loop [index-seq indexes index-map {}]
-      (if (seq index-seq)
-        (let [index (first index-seq)
-              index-map (add-index index-map
-                                   (keyword (.getName (.getKey index)))
-                                   (set (.getValue index)))]
-          (recur (rest index-seq) index-map))
-        index-map))))
-
-(defn- riak-object-to-map
-  "Turn an IRiakObject implementation into
-  a Clojure map"
-  [^IRiakObject riak-object]
-  (-> {}
-    (assoc :vector-clock (.getBytes (.getVClock riak-object)))
-    (assoc :content-type (.getContentType riak-object))
-    (assoc :vtag (.getVtag riak-object))
-    (assoc :last-modified (.getLastModified riak-object))
-    (assoc :metadata (into {} (.getMeta riak-object)))
-    (assoc :value (.getValue riak-object))
-    (assoc :indexes (riak-indexes-to-map
-                      (concat (seq (.allBinIndexes riak-object))
-                              (seq (.allIntIndexes riak-object)))))))
-
-(defn- ^IRiakObject map-to-riak-object
-  "Construct a DefaultRiakObject from
-  a `bucket` `key` and `obj` map"
-  [bucket key obj]
-  (let [vclock (:vector-clock obj)
-        ^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
-                                         (.withValue (:value obj))
-                                         (.withContentType (or (:content-type obj)
-                                                               "application/json"))
-                                         (.withUsermeta (:metadata obj {})))]
-    (doseq [[index-name index-seq] (:indexes obj)]
-      (doseq [index-value index-seq]
-        (.addIndex riak-object (name index-name) index-value)))
-    (if vclock
-      (.build (.withValue riak-object vclock))
-      (.build riak-object))))
 
 (defn connect
   "Return a connection. With no arguments,
@@ -172,32 +83,6 @@
         delete-meta (delete-options options)]
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
-
-(defn- create-index [index-name start]
-  (let [str-name (name index-name)]
-    (cond
-      (instance? String start) (BinIndex/named str-name)
-      ; TODO we should check for something
-      ; more general than Long here
-      (instance? Long start) (IntIndex/named str-name))))
-
-(defn- create-index-query
-  [bucket index-name value-or-range]
-  (cond
-    (instance? clojure.lang.IPersistentVector value-or-range) 
-    (let [start (clojure.core/get value-or-range 0)
-          end (clojure.core/get value-or-range 1)]
-      (cond
-        (instance? String start) (BinRangeQuery. (create-index index-name start) bucket start end)
-        (instance? Long start) (IntRangeQuery. (create-index index-name start) bucket (Integer. start) (Integer. end))))
-    ; single value
-    true
-    (let [value value-or-range]
-      (cond
-        (instance? String value)
-        (BinValueQuery. (create-index index-name value) bucket value)
-        (instance? Long value)
-        (IntValueQuery. (create-index index-name value) bucket (Integer. value))))))
 
 (defn index-query [^RawClient client
                    bucket
