@@ -33,41 +33,23 @@
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
-(defn- get-as-integer
-  [key container]
-  (when-let [i (key container)]
-    (Integer. i)))
+(defn- typed-options [options]
+  (reduce (fn [in-process opt-key]
+            (update-in in-process [opt-key] #(if % (Integer. %) %))) 
+    options
+    [:r :pr :w :dw :pw :rw]))
 
 (defn- fetch-options
-  [options]
-  (let [r  (get-as-integer :r options)
-        pr (get-as-integer :pr options)
-        notfound-ok (:notfound-ok options)
-        basic-quorum (:basic-quorum options)
-        head (:head options)]
-    (FetchMeta. r, pr, notfound-ok,
-                basic-quorum, head,
-                nil, nil, nil)))
+  [{:keys [r pr notfound-ok basic-quorum head]}]
+  (FetchMeta. r, pr, notfound-ok, basic-quorum, head, nil, nil, nil))
 
 (defn- store-options
-  [options]
-  (let [w  (get-as-integer :w options)
-        dw (get-as-integer :dw options)
-        pw (get-as-integer :pw options)
-        return-body (:return-body options)]
-    (StoreMeta. w, dw, pw, return-body,
-                nil, nil)))
+  [{:keys [w dw pw return-body]}]
+  (StoreMeta. w, dw, pw, return-body, nil, nil))
 
 (defn- delete-options
-  [options]
-  (let [r  (get-as-integer :r options)
-        pr (get-as-integer :pr options)
-        w  (get-as-integer :w options)
-        dw (get-as-integer :dw options)
-        pw (get-as-integer :pw options)
-        rw (get-as-integer :rw options)
-        vclock (:vclock options)]
-    (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
+  [{:keys [r pr w dw pw rw vclock]}]
+  (DeleteMeta. r, pr, w, dw, pw, rw, vclock))
 
 (defn- riak-indexes-to-map
   "Converts a seq of Riak Indexes into a hash of sets. The seq could
@@ -133,7 +115,7 @@
     (if result result true)))
 
 (defn get-raw [^RawClient client bucket key & options]
-  (let [options (or (first options) {})
+  (let [options (or (typed-options (first options)) {})
         fetch-meta (fetch-options options)
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
     (map riak-object-to-map results)))
@@ -148,7 +130,7 @@
     (map #(assoc % :value (deserialize %)) results)))
 
 (defn put-raw [^RawClient client bucket key obj & options]
-  (let [options (or (first options) {})
+  (let [options (or (typed-options (first options)) {})
         riak-object (map-to-riak-object bucket key obj)
         store-meta (store-options options)
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
@@ -164,7 +146,7 @@
     (map #(assoc % :value (deserialize %)) results)))
 
 (defn delete [^RawClient client bucket key & options]
-  (let [options (or (first options) {})
+  (let [options (or (typed-options (first options)) {})
         delete-meta (delete-options options)]
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
