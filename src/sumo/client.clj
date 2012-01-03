@@ -35,7 +35,7 @@
 
 (defn- get-as-integer
   [key container]
-  (if-let [i (key container)]
+  (when-let [i (key container)]
     (Integer. i)))
 
 (defn- fetch-options
@@ -75,48 +75,44 @@
   must be careful to add duplicates to the set rather than overriding
   the first values."
   [indexes]
-  (let [add-or-new-set (fn [prev val]
-                         (if (nil? prev) val (union prev val)))
-        add-index (fn [map name val]
-                    (update-in map [name] add-or-new-set val))]
-    (loop [index-seq indexes index-map {}]
-      (if (seq index-seq)
-        (let [index (first index-seq)
-              index-map (add-index index-map
-                                   (keyword (.getName (.getKey index)))
-                                   (set (.getValue index)))]
-          (recur (rest index-seq) index-map))
-        index-map))))
+  (letfn [(add-or-new-set [prev val]
+            (if prev (union prev val) val))
+         
+          (step [index-map index]
+            (update-in index-map
+                       [ (keyword (.getName (.getKey index))) ]
+                       add-or-new-set 
+                       (set (.getValue index))))]
+
+          (reduce step {} indexes)))
 
 (defn- riak-object-to-map
   "Turn an IRiakObject implementation into
   a Clojure map"
   [^IRiakObject riak-object]
-  (-> {}
-    (assoc :vector-clock (.getBytes (.getVClock riak-object)))
-    (assoc :content-type (.getContentType riak-object))
-    (assoc :vtag (.getVtag riak-object))
-    (assoc :last-modified (.getLastModified riak-object))
-    (assoc :metadata (into {} (.getMeta riak-object)))
-    (assoc :value (.getValue riak-object))
-    (assoc :indexes (riak-indexes-to-map
+  { :vector-clock (.getBytes (.getVClock riak-object))
+    :content-type (.getContentType riak-object)
+    :vtag (.getVtag riak-object)
+    :last-modified (.getLastModified riak-object)
+    :metadata (into {} (.getMeta riak-object))
+    :value (.getValue riak-object)
+    :indexes (riak-indexes-to-map
                       (concat (seq (.allBinIndexes riak-object))
-                              (seq (.allIntIndexes riak-object)))))))
+                              (seq (.allIntIndexes riak-object)))) })
 
 (defn- ^IRiakObject map-to-riak-object
   "Construct a DefaultRiakObject from
   a `bucket` `key` and `obj` map"
   [bucket key obj]
-  (let [vclock (:vector-clock obj)
-        ^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
+  (let [^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
                                          (.withValue (:value obj))
                                          (.withContentType (or (:content-type obj)
                                                                "application/json"))
                                          (.withUsermeta (:metadata obj {})))]
-    (doseq [[index-name index-seq] (:indexes obj)]
-      (doseq [index-value index-seq]
-        (.addIndex riak-object (name index-name) index-value)))
-    (if vclock
+    (doseq [[index-name index-seq] (:indexes obj)
+             index-value index-seq]
+        (.addIndex riak-object (name index-name) index-value))
+    (if-let [vclock (:vector-clock obj)]
       (.build (.withValue riak-object vclock))
       (.build riak-object))))
 
@@ -134,7 +130,7 @@
   "Returns true or raises ConnectException"
   [^RawClient client]
   (let [result (.ping client)]
-    (if (nil? result) true result)))
+    (if result result true)))
 
 (defn get-raw [^RawClient client bucket key & options]
   (let [options (or (first options) {})
