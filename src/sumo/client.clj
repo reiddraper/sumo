@@ -33,41 +33,23 @@
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
-(defn- get-as-integer
-  [key container]
-  (if-let [i (key container)]
-    (Integer. i)))
+(defn- typed-options [options]
+  (reduce (fn [in-process opt-key]
+            (update-in in-process [opt-key] #(if % (Integer. %) %))) 
+    options
+    [:r :pr :w :dw :pw :rw]))
 
 (defn- fetch-options
-  [options]
-  (let [r  (get-as-integer :r options)
-        pr (get-as-integer :pr options)
-        notfound-ok (:notfound-ok options)
-        basic-quorum (:basic-quorum options)
-        head (:head options)]
-    (FetchMeta. r, pr, notfound-ok,
-                basic-quorum, head,
-                nil, nil, nil)))
+  [{:keys [r pr notfound-ok basic-quorum head]}]
+  (FetchMeta. r, pr, notfound-ok, basic-quorum, head, nil, nil, nil))
 
 (defn- store-options
-  [options]
-  (let [w  (get-as-integer :w options)
-        dw (get-as-integer :dw options)
-        pw (get-as-integer :pw options)
-        return-body (:return-body options)]
-    (StoreMeta. w, dw, pw, return-body,
-                nil, nil)))
+  [{:keys [w dw pw return-body]}]
+  (StoreMeta. w, dw, pw, return-body, nil, nil))
 
 (defn- delete-options
-  [options]
-  (let [r  (get-as-integer :r options)
-        pr (get-as-integer :pr options)
-        w  (get-as-integer :w options)
-        dw (get-as-integer :dw options)
-        pw (get-as-integer :pw options)
-        rw (get-as-integer :rw options)
-        vclock (:vclock options)]
-    (DeleteMeta. r, pr, w, dw, pw, rw, vclock)))
+  [{:keys [r pr w dw pw rw vclock]}]
+  (DeleteMeta. r, pr, w, dw, pw, rw, vclock))
 
 (defn- riak-indexes-to-map
   "Converts a seq of Riak Indexes into a hash of sets. The seq could
@@ -75,48 +57,44 @@
   must be careful to add duplicates to the set rather than overriding
   the first values."
   [indexes]
-  (let [add-or-new-set (fn [prev val]
-                         (if (nil? prev) val (union prev val)))
-        add-index (fn [map name val]
-                    (update-in map [name] add-or-new-set val))]
-    (loop [index-seq indexes index-map {}]
-      (if (seq index-seq)
-        (let [index (first index-seq)
-              index-map (add-index index-map
-                                   (keyword (.getName (.getKey index)))
-                                   (set (.getValue index)))]
-          (recur (rest index-seq) index-map))
-        index-map))))
+  (letfn [(add-or-new-set [prev val]
+            (if prev (union prev val) val))
+         
+          (step [index-map index]
+            (update-in index-map
+                       [ (keyword (.getName (.getKey index))) ]
+                       add-or-new-set 
+                       (set (.getValue index))))]
+
+          (reduce step {} indexes)))
 
 (defn- riak-object-to-map
   "Turn an IRiakObject implementation into
   a Clojure map"
   [^IRiakObject riak-object]
-  (-> {}
-    (assoc :vector-clock (.getBytes (.getVClock riak-object)))
-    (assoc :content-type (.getContentType riak-object))
-    (assoc :vtag (.getVtag riak-object))
-    (assoc :last-modified (.getLastModified riak-object))
-    (assoc :metadata (into {} (.getMeta riak-object)))
-    (assoc :value (.getValue riak-object))
-    (assoc :indexes (riak-indexes-to-map
+  { :vector-clock (.getBytes (.getVClock riak-object))
+    :content-type (.getContentType riak-object)
+    :vtag (.getVtag riak-object)
+    :last-modified (.getLastModified riak-object)
+    :metadata (into {} (.getMeta riak-object))
+    :value (.getValue riak-object)
+    :indexes (riak-indexes-to-map
                       (concat (seq (.allBinIndexes riak-object))
-                              (seq (.allIntIndexes riak-object)))))))
+                              (seq (.allIntIndexes riak-object)))) })
 
 (defn- ^IRiakObject map-to-riak-object
   "Construct a DefaultRiakObject from
   a `bucket` `key` and `obj` map"
   [bucket key obj]
-  (let [vclock (:vector-clock obj)
-        ^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
+  (let [^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
                                          (.withValue (:value obj))
                                          (.withContentType (or (:content-type obj)
                                                                "application/json"))
                                          (.withUsermeta (:metadata obj {})))]
-    (doseq [[index-name index-seq] (:indexes obj)]
-      (doseq [index-value index-seq]
-        (.addIndex riak-object (name index-name) index-value)))
-    (if vclock
+    (doseq [[index-name index-seq] (:indexes obj)
+             index-value index-seq]
+        (.addIndex riak-object (name index-name) index-value))
+    (if-let [vclock (:vector-clock obj)]
       (.build (.withValue riak-object vclock))
       (.build riak-object))))
 
@@ -134,10 +112,10 @@
   "Returns true or raises ConnectException"
   [^RawClient client]
   (let [result (.ping client)]
-    (if (nil? result) true result)))
+    (if result result true)))
 
 (defn get-raw [^RawClient client bucket key & options]
-  (let [options (or (first options) {})
+  (let [options (or (typed-options (first options)) {})
         fetch-meta (fetch-options options)
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
     (map riak-object-to-map results)))
@@ -152,7 +130,7 @@
     (map #(assoc % :value (deserialize %)) results)))
 
 (defn put-raw [^RawClient client bucket key obj & options]
-  (let [options (or (first options) {})
+  (let [options (or (typed-options (first options)) {})
         riak-object (map-to-riak-object bucket key obj)
         store-meta (store-options options)
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
@@ -168,7 +146,7 @@
     (map #(assoc % :value (deserialize %)) results)))
 
 (defn delete [^RawClient client bucket key & options]
-  (let [options (or (first options) {})
+  (let [options (or (typed-options (first options)) {})
         delete-meta (delete-options options)]
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
