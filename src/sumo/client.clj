@@ -155,9 +155,9 @@
 (defmulti create-index-query (fn [_ _ val-or-range] 
                                (if (vector? val-or-range) :vector :single)))
 
-(defmethod create-index-query :vector [bucket index-name value-or-range]
-  (let [start (clojure.core/get value-or-range 0)
-        end (clojure.core/get value-or-range 1)]
+(defmethod create-index-query :vector [bucket index-name range]
+  (let [start (clojure.core/get range 0)
+        end (clojure.core/get range 1)]
     (cond
       (string? start)
       (BinRangeQuery.
@@ -166,15 +166,14 @@
       (IntRangeQuery.
         (create-index index-name start) bucket (Integer. start) (Integer. end)))))
 
-(defmethod create-index-query :single [bucket index-name value-or-range]
-  (let [value value-or-range]
-    (cond
-      (string? value)
-      (BinValueQuery.
-        (create-index index-name value) bucket value)
-      (number? value)
-      (IntValueQuery.
-        (create-index index-name value) bucket (Integer. value)))))
+(defmethod create-index-query :single [bucket index-name value]
+  (cond
+    (string? value)
+    (BinValueQuery.
+      (create-index index-name value) bucket value)
+    (number? value)
+    (IntValueQuery.
+      (create-index index-name value) bucket (Integer. value))))
 
 (defn index-query [^RawClient client bucket index-name value-or-range]
   (let [str-name (name index-name)
