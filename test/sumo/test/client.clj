@@ -14,7 +14,7 @@
   (let [put-ret (client/put c "test-bucket" "get-head"
                             {:content-type "text/plain"
                              :value "get-head test"})
-        get-ret (client/get c "test-bucket" "get-head" {:head true})]
+        get-ret (client/get c "test-bucket" "get-head" :head true)]
     (is (= ""
            (:value (first get-ret))))))
 

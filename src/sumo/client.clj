@@ -111,43 +111,37 @@
 (defn ping
   "Returns true or raises ConnectException"
   [^RawClient client]
-  (let [result (.ping client)]
-    (if result result true)))
+  (or (.ping client) true))
 
-(defn get-raw [^RawClient client bucket key & options]
-  (let [options (or (typed-options (first options)) {})
-        fetch-meta (fetch-options options)
+(defn- get-raw [^RawClient client bucket key options]
+  (let [fetch-meta (fetch-options (typed-options options))
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
     (map riak-object-to-map results)))
 
-(defn get [^RawClient client bucket key & options]
+(defn get [^RawClient client bucket key & {:as options}]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
   Usage looks like:
   (def results (sumo.client/get client \"bucket\" \"key\"))
   (println (:value (first (results))))"
-  (let [options (or (first options) {})
-        results (get-raw client bucket key options)]
+  (let [results (get-raw client bucket key (or options {}))]
     (map #(assoc % :value (deserialize %)) results)))
 
-(defn put-raw [^RawClient client bucket key obj & options]
-  (let [options (or (typed-options (first options)) {})
-        riak-object (map-to-riak-object bucket key obj)
-        store-meta (store-options options)
+(defn- put-raw [^RawClient client bucket key obj options]
+  (let [riak-object (map-to-riak-object bucket key obj)
+        store-meta (store-options (typed-options options))
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
     (map riak-object-to-map results)))
 
-(defn put [^RawClient client bucket key obj & options]
+(defn put [^RawClient client bucket key obj & {:as options}]
   "Store an object into Riak.
   Usage looks like:
   (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
-  (let [options (or (first options) {})
-        new-obj (assoc obj :value (serialize obj))
-        results (put-raw client bucket key new-obj options)]
+  (let [new-obj (assoc obj :value (serialize obj))
+        results (put-raw client bucket key new-obj (or options {}))]
     (map #(assoc % :value (deserialize %)) results)))
 
-(defn delete [^RawClient client bucket key & options]
-  (let [options (or (typed-options (first options)) {})
-        delete-meta (delete-options options)]
+(defn delete [^RawClient client bucket key & {:as options}]
+  (let [delete-meta (delete-options (typed-options options))]
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
 
