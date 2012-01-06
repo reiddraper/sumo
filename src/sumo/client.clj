@@ -138,7 +138,8 @@
   (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
   (let [new-obj (assoc obj :value (serialize obj))
         results (put-raw client bucket key new-obj (or options {}))]
-    (map #(assoc % :value (deserialize %)) results)))
+    (for [r results]
+      (assoc r :value (deserialize r)))))
 
 (defn delete [^RawClient client bucket key & {:as options}]
   (let [delete-meta (delete-options (typed-options options))]
@@ -151,27 +152,29 @@
       (string? start) (BinIndex/named str-name)
       (number? start) (IntIndex/named str-name))))
 
-(defn- create-index-query
-  [bucket index-name value-or-range]
-  (if (vector? value-or-range)
-    (let [start (clojure.core/get value-or-range 0)
-          end   (clojure.core/get value-or-range 1)]
-      (cond
-       (string? start)
-       (BinRangeQuery.
+(defmulti create-index-query (fn [_ _ val-or-range] 
+                               (if (vector? val-or-range) :vector :single)))
+
+(defmethod create-index-query :vector [bucket index-name value-or-range]
+  (let [start (clojure.core/get value-or-range 0)
+        end (clojure.core/get value-or-range 1)]
+    (cond
+      (string? start)
+      (BinRangeQuery.
         (create-index index-name start) bucket start end)
-       (number? start)
-       (IntRangeQuery.
-        (create-index index-name start) bucket (Integer. start) (Integer. end))))
-    ; single value
-    (let [value value-or-range]
-      (cond
-       (string? value)
-       (BinValueQuery.
+      (number? start)
+      (IntRangeQuery.
+        (create-index index-name start) bucket (Integer. start) (Integer. end)))))
+
+(defmethod create-index-query :single [bucket index-name value-or-range]
+  (let [value value-or-range]
+    (cond
+      (string? value)
+      (BinValueQuery.
         (create-index index-name value) bucket value)
-       (number? value)
-       (IntValueQuery.
-        (create-index index-name value) bucket (Integer. value))))))
+      (number? value)
+      (IntValueQuery.
+        (create-index index-name value) bucket (Integer. value)))))
 
 (defn index-query [^RawClient client bucket index-name value-or-range]
   (let [str-name (name index-name)
