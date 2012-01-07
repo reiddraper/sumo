@@ -111,12 +111,10 @@
 (defn ping
   "Returns true or raises ConnectException"
   [^RawClient client]
-  (let [result (.ping client)]
-    (if result result true)))
+  (or (.ping client) true))
 
 (defn get-raw [^RawClient client bucket key & options]
-  (let [options (or (typed-options (first options)) {})
-        fetch-meta (fetch-options options)
+  (let [fetch-meta (fetch-options (typed-options (or (first options) {})))
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
     (map riak-object-to-map results)))
 
@@ -125,14 +123,13 @@
   Usage looks like:
   (def results (sumo.client/get client \"bucket\" \"key\"))
   (println (:value (first (results))))"
-  (let [options (or (first options) {})
-        results (get-raw client bucket key options)]
-    (map #(assoc % :value (deserialize %)) results)))
+  (let [results (get-raw client bucket key (or (first options) {}))]
+    (for [r results]
+      (assoc r :value (deserialize r)))))
 
 (defn put-raw [^RawClient client bucket key obj & options]
-  (let [options (or (typed-options (first options)) {})
-        riak-object (map-to-riak-object bucket key obj)
-        store-meta (store-options options)
+  (let [riak-object (map-to-riak-object bucket key obj)
+        store-meta (store-options (typed-options (or (first options) {})))
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
     (map riak-object-to-map results)))
 
@@ -140,14 +137,13 @@
   "Store an object into Riak.
   Usage looks like:
   (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
-  (let [options (or (first options) {})
-        new-obj (assoc obj :value (serialize obj))
-        results (put-raw client bucket key new-obj options)]
-    (map #(assoc % :value (deserialize %)) results)))
+  (let [new-obj (assoc obj :value (serialize obj))
+        results (put-raw client bucket key new-obj (or (first options) {}))]
+    (for [r results]
+      (assoc r :value (deserialize r)))))
 
 (defn delete [^RawClient client bucket key & options]
-  (let [options (or (typed-options (first options)) {})
-        delete-meta (delete-options options)]
+  (let [delete-meta (delete-options (typed-options (or (first options) {})))]
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
 
@@ -157,29 +153,29 @@
       (string? start) (BinIndex/named str-name)
       (number? start) (IntIndex/named str-name))))
 
-(defn- create-index-query
-  [bucket index-name value-or-range]
-  (if (vector? value-or-range)
-    (let [start (clojure.core/get value-or-range 0)
-          end   (clojure.core/get value-or-range 1)]
-      (cond
-       (string? start)
-       (BinRangeQuery.
+(defmulti create-index-query (fn [_ _ val-or-range] 
+                               (if (vector? val-or-range) :vector :single)))
+
+(defmethod create-index-query :vector [bucket index-name range]
+  (let [start (clojure.core/get range 0)
+        end (clojure.core/get range 1)]
+    (cond
+      (string? start)
+      (BinRangeQuery.
         (create-index index-name start) bucket start end)
-       (number? start)
-       (IntRangeQuery.
-        (create-index index-name start) bucket (Integer. start) (Integer. end))))
-    ; single value
-    (let [value value-or-range]
-      (cond
-       (string? value)
-       (BinValueQuery.
-        (create-index index-name value) bucket value)
-       (number? value)
-       (IntValueQuery.
-        (create-index index-name value) bucket (Integer. value))))))
+      (number? start)
+      (IntRangeQuery.
+        (create-index index-name start) bucket (Integer. start) (Integer. end)))))
+
+(defmethod create-index-query :single [bucket index-name value]
+  (cond
+    (string? value)
+    (BinValueQuery.
+      (create-index index-name value) bucket value)
+    (number? value)
+    (IntValueQuery.
+      (create-index index-name value) bucket (Integer. value))))
 
 (defn index-query [^RawClient client bucket index-name value-or-range]
-  (let [str-name (name index-name)
-        query (create-index-query bucket index-name value-or-range)]
+  (let [query (create-index-query bucket index-name value-or-range)]
     (seq (.fetchIndex client query))))
