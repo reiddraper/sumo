@@ -113,8 +113,8 @@
   [^RawClient client]
   (or (.ping client) true))
 
-(defn- get-raw [^RawClient client bucket key & options]
-  (let [fetch-meta (fetch-options (typed-options (or (first options) {})))
+(defn- get-raw [^RawClient client bucket key & {:as options}]
+  (let [fetch-meta (fetch-options (typed-options (or options {})))
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
     (map riak-object-to-map results)))
 
@@ -123,13 +123,13 @@
   Usage looks like:
   (def results (sumo.client/get client \"bucket\" \"key\"))
   (println (:value (first (results))))"
-  (let [results (get-raw client bucket key (or options {}))]
+  (let [results (apply get-raw client bucket key (mapcat vec (or options {})))]
     (for [r results]
       (assoc r :value (deserialize r)))))
 
-(defn- put-raw [^RawClient client bucket key obj & options]
+(defn- put-raw [^RawClient client bucket key obj & {:as options}]
   (let [riak-object (map-to-riak-object bucket key obj)
-        store-meta (store-options (typed-options (or (first options) {})))
+        store-meta (store-options (typed-options (or options {})))
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
     (map riak-object-to-map results)))
 
@@ -138,7 +138,7 @@
   Usage looks like:
   (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
   (let [new-obj (assoc obj :value (serialize obj))
-        results (put-raw client bucket key new-obj (or options {}))]
+        results (apply put-raw client bucket key new-obj (mapcat vec (or options {})))]
     (for [r results]
       (assoc r :value (deserialize r)))))
 
