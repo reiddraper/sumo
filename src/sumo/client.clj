@@ -113,8 +113,8 @@
   [^RawClient client]
   (or (.ping client) true))
 
-(defn- get-raw [^RawClient client bucket key options]
-  (let [fetch-meta (fetch-options (typed-options options))
+(defn- get-raw [^RawClient client bucket key & options]
+  (let [fetch-meta (fetch-options (typed-options (or (first options) {})))
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
     (map riak-object-to-map results)))
 
@@ -126,9 +126,9 @@
   (let [results (get-raw client bucket key (or options {}))]
     (map #(assoc % :value (deserialize %)) results)))
 
-(defn- put-raw [^RawClient client bucket key obj options]
+(defn- put-raw [^RawClient client bucket key obj & options]
   (let [riak-object (map-to-riak-object bucket key obj)
-        store-meta (store-options (typed-options options))
+        store-meta (store-options (typed-options (or (first options) {})))
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
     (map riak-object-to-map results)))
 
@@ -176,6 +176,5 @@
       (create-index index-name value) bucket (Integer. value))))
 
 (defn index-query [^RawClient client bucket index-name value-or-range]
-  (let [str-name (name index-name)
-        query (create-index-query bucket index-name value-or-range)]
+  (let [query (create-index-query bucket index-name value-or-range)]
     (seq (.fetchIndex client query))))
