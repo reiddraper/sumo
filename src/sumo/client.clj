@@ -124,7 +124,8 @@
   (def results (sumo.client/get client \"bucket\" \"key\"))
   (println (:value (first (results))))"
   (let [results (get-raw client bucket key (or options {}))]
-    (map #(assoc % :value (deserialize %)) results)))
+    (for [r results]
+      (assoc r :value (deserialize r)))))
 
 (defn- put-raw [^RawClient client bucket key obj & options]
   (let [riak-object (map-to-riak-object bucket key obj)
