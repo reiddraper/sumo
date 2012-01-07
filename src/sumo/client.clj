@@ -19,6 +19,7 @@
 
 (ns sumo.client
   (:refer-clojure :exclude [get key pr])
+  (:require [sumo.internal :as i])
   (:use [sumo.serializers :only [serialize deserialize]]
         [clojure.set :only [union]])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
@@ -32,71 +33,6 @@
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
-
-(defn- typed-options [options]
-  (reduce (fn [in-process opt-key]
-            (update-in in-process [opt-key] #(if % (Integer. %) %))) 
-    options
-    [:r :pr :w :dw :pw :rw]))
-
-(defn- fetch-options
-  [{:keys [r pr notfound-ok basic-quorum head]}]
-  (FetchMeta. r, pr, notfound-ok, basic-quorum, head, nil, nil, nil))
-
-(defn- store-options
-  [{:keys [w dw pw return-body]}]
-  (StoreMeta. w, dw, pw, return-body, nil, nil))
-
-(defn- delete-options
-  [{:keys [r pr w dw pw rw vclock]}]
-  (DeleteMeta. r, pr, w, dw, pw, rw, vclock))
-
-(defn- riak-indexes-to-map
-  "Converts a seq of Riak Indexes into a hash of sets. The seq could
-  define two indexes named 'foo', one binary and one integer, so we
-  must be careful to add duplicates to the set rather than overriding
-  the first values."
-  [indexes]
-  (letfn [(add-or-new-set [prev val]
-            (if prev (union prev val) val))
-         
-          (step [index-map index]
-            (update-in index-map
-                       [ (keyword (.getName (.getKey index))) ]
-                       add-or-new-set 
-                       (set (.getValue index))))]
-
-          (reduce step {} indexes)))
-
-(defn- riak-object-to-map
-  "Turn an IRiakObject implementation into
-  a Clojure map"
-  [^IRiakObject riak-object]
-  { :vector-clock (.getBytes (.getVClock riak-object))
-    :content-type (.getContentType riak-object)
-    :vtag (.getVtag riak-object)
-    :last-modified (.getLastModified riak-object)
-    :metadata (into {} (.getMeta riak-object))
-    :value (.getValue riak-object)
-    :indexes (riak-indexes-to-map
-                      (concat (seq (.allBinIndexes riak-object))
-                              (seq (.allIntIndexes riak-object)))) })
-
-(defn- ^IRiakObject map-to-riak-object
-  "Construct a DefaultRiakObject from
-  a `bucket` `key` and `obj` map"
-  [bucket key obj]
-  (let [^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
-                                         (.withValue (:value obj))
-                                         (.withContentType (or (:content-type obj)
-                                                               "application/json"))
-                                         (.withUsermeta (:metadata obj {})))]
-    (doseq [[index-name index-seq] (:indexes obj)
-             index-value index-seq]
-        (.addIndex riak-object (name index-name) index-value))
-    (if-let [vclock (:vector-clock obj)]
-      (.build (.withValue riak-object vclock))
-      (.build riak-object))))
 
 (defn connect
   "Return a connection. With no arguments,
@@ -114,9 +50,9 @@
   (or (.ping client) true))
 
 (defn get-raw [^RawClient client bucket key & options]
-  (let [fetch-meta (fetch-options (typed-options (or (first options) {})))
+  (let [fetch-meta (i/fetch-options (i/typed-options (or (first options) {})))
         results (.fetch client ^String bucket ^String key ^FetchMeta fetch-meta)]
-    (map riak-object-to-map results)))
+    (map i/riak-object-to-map results)))
 
 (defn get [^RawClient client bucket key & options]
   "Retrieve a lazy-seq of objects at `bucket` and `key`
@@ -128,10 +64,10 @@
       (assoc r :value (deserialize r)))))
 
 (defn put-raw [^RawClient client bucket key obj & options]
-  (let [riak-object (map-to-riak-object bucket key obj)
-        store-meta (store-options (typed-options (or (first options) {})))
+  (let [riak-object (i/map-to-riak-object bucket key obj)
+        store-meta (i/store-options (i/typed-options (or (first options) {})))
         results (.store client ^IRiakObject riak-object ^StoreMeta store-meta)]
-    (map riak-object-to-map results)))
+    (map i/riak-object-to-map results)))
 
 (defn put [^RawClient client bucket key obj & options]
   "Store an object into Riak.
@@ -143,15 +79,9 @@
       (assoc r :value (deserialize r)))))
 
 (defn delete [^RawClient client bucket key & options]
-  (let [delete-meta (delete-options (typed-options (or (first options) {})))]
+  (let [delete-meta (i/delete-options (i/typed-options (or (first options) {})))]
     (.delete client ^String bucket ^String key ^DeleteMeta delete-meta))
   true)
-
-(defn- create-index [index-name start]
-  (let [str-name (name index-name)]
-    (cond
-      (string? start) (BinIndex/named str-name)
-      (number? start) (IntIndex/named str-name))))
 
 (defmulti create-index-query (fn [_ _ val-or-range] 
                                (if (vector? val-or-range) :vector :single)))
@@ -162,19 +92,19 @@
     (cond
       (string? start)
       (BinRangeQuery.
-        (create-index index-name start) bucket start end)
+        (i/create-index index-name start) bucket start end)
       (number? start)
       (IntRangeQuery.
-        (create-index index-name start) bucket (Integer. start) (Integer. end)))))
+        (i/create-index index-name start) bucket (Integer. start) (Integer. end)))))
 
 (defmethod create-index-query :single [bucket index-name value]
   (cond
     (string? value)
     (BinValueQuery.
-      (create-index index-name value) bucket value)
+      (i/create-index index-name value) bucket value)
     (number? value)
     (IntValueQuery.
-      (create-index index-name value) bucket (Integer. value))))
+      (i/create-index index-name value) bucket (Integer. value))))
 
 (defn index-query [^RawClient client bucket index-name value-or-range]
   (let [query (create-index-query bucket index-name value-or-range)]
