@@ -9,7 +9,7 @@
 
 (deftest deserialize-from-json
   (is (= (s/deserialize {:content-type "application/json"
-                         :value "[1,[1,2],\"Foo\",{\"a\":5}]"})
+                         :value (.getBytes "[1,[1,2],\"Foo\",{\"a\":5}]")})
          [1, [1,2], "Foo", {"a" 5}])))
 
 (deftest serialize-to-reader
@@ -19,5 +19,5 @@
 
 (deftest deserialize-from-reader
   (is (= (s/deserialize {:content-type "application/clojure"
-                         :value "[1 [1 2] \"Foo\" #=(clojure.lang.PersistentArrayMap/create {:a 5})]"})
+                         :value (.getBytes "[1 [1 2] \"Foo\" #=(clojure.lang.PersistentArrayMap/create {:a 5})]")})
          [1, [1,2], "Foo", {:a 5}])))

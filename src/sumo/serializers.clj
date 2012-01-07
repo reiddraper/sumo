@@ -62,7 +62,7 @@
   [{value :value}]
   ; TODO: Having to turn the byte
   ; array into a String seems wrong?
-  (json/parse-string (String. value)))
+  (json/parse-string (String. ^bytes value)))
 
 (defmethod deserialize "text/plain"
   [{value :value}]
@@ -71,4 +71,4 @@
 (defmethod deserialize "application/clojure"
   [{value :value}]
   (binding [*print-dup* true]
-    (read-string value)))
+    (read-string (String. ^bytes value))))

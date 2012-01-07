@@ -23,13 +23,13 @@
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta]
            [com.basho.riak.client IRiakObject]
-           [com.basho.riak.client.query.indexes BinIndex IntIndex]
+           [com.basho.riak.client.query.indexes RiakIndex BinIndex IntIndex]
            [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery
             IntValueQuery IntRangeQuery]))
 
 (defn typed-options [options]
   (reduce (fn [in-process opt-key]
-            (update-in in-process [opt-key] #(if % (Integer. %) %))) 
+            (update-in in-process [opt-key] #(if % (Integer. ^Long %) %)))
     options
     [:r :pr :w :dw :pw :rw]))
 

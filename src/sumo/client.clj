@@ -95,7 +95,7 @@
         (i/create-index index-name start) bucket start end)
       (number? start)
       (IntRangeQuery.
-        (i/create-index index-name start) bucket (Integer. start) (Integer. end)))))
+        (i/create-index index-name start) bucket (Integer. ^Long start) (Integer. ^Long end)))))
 
 (defmethod create-index-query :single [bucket index-name value]
   (cond
@@ -104,7 +104,7 @@
       (i/create-index index-name value) bucket value)
     (number? value)
     (IntValueQuery.
-      (i/create-index index-name value) bucket (Integer. value))))
+      (i/create-index index-name value) bucket (Integer. ^Long value))))
 
 (defn index-query [^RawClient client bucket index-name value-or-range]
   (let [query (create-index-query bucket index-name value-or-range)]
