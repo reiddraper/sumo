@@ -1,45 +1,35 @@
 (ns sumo.test.client
   (:require [sumo.client :as client])
-  (:use [clojure.test]))
+  (:use midje.sweet ))
 
 (def c (client/connect))
 
-(deftest connect-and-ping
-  (is (client/ping c)))
+(fact "can ping the client"
+  (client/ping c) => true)
 
-(deftest get-missing
-  (is (nil? (seq (client/get c "does-not-exist" "does-not-exist")))))
+(fact "get of non-existant key returns empty result" 
+  (client/get c "does-not-exist" "does-not-exist") => [])
 
-(deftest get-head
-  (let [put-ret (client/put c "test-bucket" "get-head"
-                            {:content-type "text/plain"
-                             :value "get-head test"})
-        get-ret (client/get c "test-bucket" "get-head" {:head true})]
-    (is (= ""
-           (:value (first get-ret))))))
+(defn- put-then-get [obj]
+  (client/put c "test-bucket" "test-key" obj)
+  (client/get c "test-bucket" "test-key"))
 
-(deftest put-get-json
-  (let [obj {:content-type "application/json"
-             :value [1 "2" '(3)]}
-        put-ret (client/put c "test-bucket" "test-key" obj)
-        get-ret (client/get c "test-bucket" "test-key")]
-    (is (= (:value obj)
-           (:value (first get-ret))))))
+(against-background [(before :facts (client/put c "test-bucket" "get-head" 
+                                        { :content-type "text/plain" 
+                                          :value "get-head test"}))]
+  (fact "get-head" 
+    (client/get c "test-bucket" "get-head" {:head true}) => (one-of (contains {:value ""})) ))
 
-(deftest put-get-json-default
-  (let [obj {:value [1 "2" '(3)]}
-        put-ret (client/put c "test-bucket" "test-key" obj)
-        get-ret (client/get c "test-bucket" "test-key")]
-    (is (= (:value obj)
-           (:value (first get-ret))))))
+(fact "put-get-json"
+  (put-then-get {:content-type "application/json"
+                 :value [1 "2" '(3)]})            =>  (one-of (contains {:value [1 "2" '(3)]})))
 
-(deftest put-get-indexes
+(fact "can save and retrieve, with JSON as the default"
+  (put-then-get {:value [1 "2" '(3)]}) => (one-of (contains {:value [1 "2" '(3)]})))
+
+(fact "put-get-indexes"
   (let [indexes {:a #{1 "binary"}
-                 :b #{2}}
-        obj {:content-type "application/json"
-             :value "Hello"
-             :indexes indexes}
-        put-ret (client/put c "test-bucket" "test-indexes-key" obj)
-        get-ret (client/get c "test-bucket" "test-indexes-key")]
-    (is (= indexes
-           (:indexes (first get-ret))))))
+                 :b #{2}}]
+    (put-then-get {:content-type "application/json"
+                   :value "Hello"
+                   :indexes indexes}) => (one-of (contains {:indexes indexes}))))
