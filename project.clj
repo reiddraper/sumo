@@ -3,7 +3,7 @@
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [com.basho.riak/riak-client "1.0.3-SNAPSHOT"]
                  [cheshire "2.0.4"]]
-  :dev-dependencies [[midje "1.3.1"]
+  :dev-dependencies [[midje "1.3.1"  :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.7"]]
   :repositories {"sonatype"
                   {:url "http://oss.sonatype.org/content/repositories/releases"
