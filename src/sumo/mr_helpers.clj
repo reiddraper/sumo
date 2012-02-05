@@ -26,32 +26,37 @@
 (def ^:private js     {:language "javascript"})
 (def ^:private erlang {:language "erlang"})
 
-(defn wrap-map [input]
+(defn- wrap-map [input]
   {:map input})
 
-(defn wrap-reduce [input]
+(defn- wrap-reduce [input]
   {:reduce input})
+
+(defn- empty-if-nil [k v]
+  (if (nil? v)
+    {}
+    {k v}))
 
 ;; Javascript functions from source ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn map-js [source & {:keys [keep] :or {keep false}}]
+(defn map-js [source & {:keys [keep]}]
   (wrap-map
-    (merge {:source source :keep keep}
+    (merge {:source source} (empty-if-nil :keep keep)
            js)))
 
-(defn reduce-js [source & {:keys [keep] :or {keep false}}]
+(defn reduce-js [source & {:keys [keep]}]
   (wrap-reduce
-    (merge {:source source :keep keep}
+    (merge {:source source} (empty-if-nil :keep keep)
            js)))
 
 
 ;; Erlang functions from source ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn map-erlang [module function & {:keys [keep] :or {keep false}}]
+(defn map-erlang [module function & {:keys [keep]}]
   (wrap-map
-    (merge {:module module :function function :keep keep}
+    (merge {:module module :function function} (empty-if-nil :keep keep)
            erlang)))
 
-(defn reduce-erlang [module function & {:keys [keep] :or {keep false}}]
+(defn reduce-erlang [module function & {:keys [keep]}]
   (wrap-reduce
-    (merge {:module module :function function :keep keep}
+    (merge {:module module :function function} (empty-if-nil :keep keep)
            erlang)))
