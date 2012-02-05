@@ -20,6 +20,7 @@
 (ns sumo.client
   (:refer-clojure :exclude [get key pr])
   (:require [sumo.internal :as i])
+  (:require [cheshire.core :as json])
   (:use [sumo.serializers :only [serialize deserialize]]
         [clojure.set :only [union]])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
@@ -29,7 +30,9 @@
            [com.basho.riak.client IRiakObject]
            [com.basho.riak.client.query.indexes BinIndex IntIndex]
            [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery
-            IntValueQuery IntRangeQuery]))
+            IntValueQuery IntRangeQuery]
+           [com.basho.riak.client.raw.query MapReduceSpec]
+           ))
 
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
@@ -109,3 +112,10 @@
 (defn index-query [^RawClient client bucket index-name value-or-range]
   (let [query (create-index-query bucket index-name value-or-range)]
     (seq (.fetchIndex client query))))
+
+(defn map-reduce [^RawClient client query]
+  (let [serialized-query (json/generate-string query)
+        spec (MapReduceSpec. serialized-query)
+        res (. client mapReduce spec)
+        raw-result (.getResultRaw res)]
+    (json/parse-string raw-result)))
