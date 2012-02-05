@@ -1,5 +1,6 @@
 (ns sumo.test.client
-  (:require [sumo.client :as client])
+  (:require [sumo.client :as client]
+            [sumo.mr-helpers :as mr-helpers])
   (:use midje.sweet ))
 
 (def c (client/connect))
@@ -33,3 +34,10 @@
     (put-then-get {:content-type "application/json"
                    :value "Hello"
                    :indexes indexes}) => (one-of (contains {:indexes indexes}))))
+
+(fact "summing the keys in an empty bucket through
+      map-reduce results in zero keys being summed"
+      (let [query {"inputs" "non-existent-bucket"
+                   "query" [(mr-helpers/map-js "function(v) {return [1]}")
+                            (mr-helpers/reduce-erlang "riak_kv_mapreduce" "reduce_sum")]}]
+        (client/map-reduce c query) => [0]))
