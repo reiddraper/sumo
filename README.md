@@ -63,19 +63,35 @@ To use sumo with another project, add `[sumo "0.0.1-SNAPSHOT"]` to your `project
 
 ; or of integers
 (sumo/index-query client "bucket" :age [21 80])
+
+;; Here is an example of sumo's map-reduce support,
+;; it follows the data from this example from the
+;; Riak wiki, http://wiki.basho.com/MapReduce.html#HTTP-Example
+
+(require '[sumo.mr-helpers :as mr-helpers])
+
+(def query {"inputs" [["alice" "p1"] ["alice" "p2"] ["alice" "p5"]]
+            "query" [(mr-helpers/map-js "function(v) {return [1]}")
+                     (mr-helpers/reduce-erlang "riak_kv_mapreduce" "reduce_sum")]})
+
+;; the query parameter to the map-reduce
+;; call is a data structure that will be
+;; json-encoded and used for the query.
+;; Read through http://wiki.basho.com/MapReduce.html
+;; for more examples of how to use map-reduce with Riak
+(sumo/map-reduce client query)
 ```
 
 ## Roadmap
 
-sumo currently just supports basic key/value access. The following is a TODO list of sorts
+sumo currently supports key/value access, secondary indexes
+and map-reduce. The following is a TODO list of sorts
 along with some ideas for a higher level interface.
 
 ### TODO
 
 * multi-client connections
 * http connections (sumo is currently just protocol buffers)
-* 2i queries
-* mapreduce
 * links
 * search
 
