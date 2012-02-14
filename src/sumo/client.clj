@@ -24,7 +24,6 @@
   (:use [sumo.serializers :only [serialize deserialize]]
         [clojure.set :only [union]])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
-           [com.basho.riak.pbc RiakClient]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta RawClient]
            [com.basho.riak.client.raw.pbc PBClientAdapter]
            [com.basho.riak.client IRiakObject]
@@ -37,7 +36,7 @@
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
-(defn connect
+(defn connect-pb
   "Return a connection. With no arguments,
   this returns a connection to localhost
   at the default protocol buffers port"
@@ -45,7 +44,10 @@
                default-port))
   ([^String host ^long port]
    (PBClientAdapter.
-     (RiakClient. host port))))
+     (com.basho.riak.pbc.RiakClient. host port))))
+
+(def ^:export connect connect-pb)
+
 
 (defn ping
   "Returns true or raises ConnectException"
