@@ -40,13 +40,13 @@
   "Return a connection. With no arguments,
   this returns a connection to localhost
   at the default protocol buffers port"
-  ([] (connect default-host
+  ([] (connect-pb default-host
                default-port))
   ([^String host ^long port]
    (PBClientAdapter.
      (com.basho.riak.pbc.RiakClient. host port))))
 
-(defn connect [& args] (connect-pb args))
+(def connect connect-pb)
 
 (defn ping
   "Returns true or raises ConnectException"
