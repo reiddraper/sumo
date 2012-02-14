@@ -1,4 +1,4 @@
-(defproject sumo "0.1.0"
+(defproject sumo "0.2.0-SNAPSHOT"
   :description "Riak driver"
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [com.basho.riak/riak-client "1.0.3"]

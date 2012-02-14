@@ -46,8 +46,7 @@
    (PBClientAdapter.
      (com.basho.riak.pbc.RiakClient. host port))))
 
-(def ^:export connect connect-pb)
-
+(defn connect [& args] (connect-pb args))
 
 (defn ping
   "Returns true or raises ConnectException"
