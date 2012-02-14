@@ -24,9 +24,9 @@
   (:use [sumo.serializers :only [serialize deserialize]]
         [clojure.set :only [union]])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
-           [com.basho.riak.pbc RiakClient]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta RawClient]
            [com.basho.riak.client.raw.pbc PBClientAdapter]
+           [com.basho.riak.client.raw.http HTTPClientAdapter]
            [com.basho.riak.client IRiakObject]
            [com.basho.riak.client.query.indexes BinIndex IntIndex]
            [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery
@@ -37,15 +37,26 @@
 (def ^{:private true} default-host "127.0.0.1")
 (def ^{:private true} default-port 8087)
 
-(defn connect
+(defn connect-pb
   "Return a connection. With no arguments,
   this returns a connection to localhost
   at the default protocol buffers port"
-  ([] (connect default-host
+  ([] (connect-pb default-host
                default-port))
   ([^String host ^long port]
    (PBClientAdapter.
-     (RiakClient. host port))))
+     (com.basho.riak.pbc.RiakClient. host port))))
+
+(def connect connect-pb)
+
+(defn connect-http
+  "Return a connection. With no arguments,
+  this returns a connection to localhost
+  at the default protocol buffers port"
+  ([] (connect-http "http://127.0.0.1:8098/riak"))
+  ([^String url]
+   (HTTPClientAdapter.
+     (com.basho.riak.client.http.RiakClient. url))))
 
 (defn ping
   "Returns true or raises ConnectException"
