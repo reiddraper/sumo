@@ -26,6 +26,7 @@
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta RawClient]
            [com.basho.riak.client.raw.pbc PBClientAdapter]
+           [com.basho.riak.client.raw.http HTTPClientAdapter]
            [com.basho.riak.client IRiakObject]
            [com.basho.riak.client.query.indexes BinIndex IntIndex]
            [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery
@@ -47,6 +48,15 @@
      (com.basho.riak.pbc.RiakClient. host port))))
 
 (def connect connect-pb)
+
+(defn connect-http
+  "Return a connection. With no arguments,
+  this returns a connection to localhost
+  at the default protocol buffers port"
+  ([] (connect-http "http://127.0.0.1:8098/riak"))
+  ([^String url]
+   (HTTPClientAdapter.
+     (com.basho.riak.client.http.RiakClient. url))))
 
 (defn ping
   "Returns true or raises ConnectException"
