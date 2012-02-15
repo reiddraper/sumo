@@ -79,10 +79,11 @@
 (defn ^IRiakObject map-to-riak-object
   "Construct a DefaultRiakObject from
   a `bucket` `key` and `obj` map"
-  [bucket key {:keys [value content-type metadata indexes vector-clock]}]
+  [bucket key {:keys [value content-type links metadata indexes vector-clock]}]
   (let [^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
                                          (.withValue value)
                                          (.withContentType (or content-type "application/json"))
+                                         (.withLinks links)
                                          (.withUsermeta (or metadata {})))]
     (doseq [[index-name index-seq] indexes
              index-value index-seq]
