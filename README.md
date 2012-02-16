@@ -17,7 +17,19 @@ To use sumo with another project, add `[sumo "0.1.0"]` to your `projects.clj`.
 (require '[sumo.client :as sumo]
          '[clojure.pprint :as pp])
 
-(def client (sumo/connect))
+;; connect with the protocol buffers
+;; client
+(def client (sumo/connect-pb))
+
+;; three examples of how to connect
+;; with HTTP
+(sumo/connect-http)
+(sumo/connect-http "http://prod0.example.com:8098/riak")
+(sumo/connect-http "127.0.0.1" 8098)
+;; the last param is the HTTP path that all riak
+;; requests start with. You might have your proxy
+;; change this, for example.
+(sumo/connect-http "127.0.0.1" 8098 "riak")
 
 (sumo/ping client)
 ;; => true
