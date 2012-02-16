@@ -63,12 +63,17 @@
 
           (reduce step {} indexes)))
 
-(defn build-links
-  "Convert a map's collection of link-shaped maps into RiakLinks"
-  [obj]
-   (map #(let [{:keys [bucket key tag]} %] (RiakLink. bucket key tag)) (:links obj)))
+(defn map-to-link
+  "Converts a link-shaped map into a RiakLink"
+  [link-map]
+  (let [{:keys [bucket key tag]} link-map] (RiakLink. bucket key tag)))
 
-
+(defn link-to-map
+  "Converts a RiakLink into a generic map"
+  [^RiakLink link]
+  {:bucket (.getBucket link)
+   :key (.getKey link)
+   :tag (.getTag link)})
 
 (defn riak-object-to-map
   "Turn an IRiakObject implementation into
@@ -79,6 +84,7 @@
     :vtag (.getVtag riak-object)
     :last-modified (.getLastModified riak-object)
     :metadata (into {} (.getMeta riak-object))
+    :links (map link-to-map (.getLinks riak-object))
     :value (.getValue riak-object)
     :indexes (riak-indexes-to-map
                       (concat (seq (.allBinIndexes riak-object))
@@ -90,7 +96,7 @@
   [bucket key {:keys [value content-type links metadata indexes vector-clock]}]
   (let [^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
                                          (.withValue value)
-                                         (.withLinks links)
+                                         (.withLinks (map map-to-link links))
                                          (.withContentType (or content-type "application/json"))
                                          (.withUsermeta (or metadata {})))]
     (doseq [[index-name index-seq] indexes
