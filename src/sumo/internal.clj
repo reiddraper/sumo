@@ -20,9 +20,10 @@
 (ns sumo.internal
   (:refer-clojure :exclude [key pr])
   (:use [clojure.set :only [union]])
-  (:import [com.basho.riak.client.builders RiakObjectBuilder]
+  (:import [java.util ArrayList]
+           [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.client.raw FetchMeta StoreMeta DeleteMeta]
-           [com.basho.riak.client IRiakObject]
+           [com.basho.riak.client IRiakObject RiakLink]
            [com.basho.riak.client.query.indexes RiakIndex BinIndex IntIndex]
            [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery
             IntValueQuery IntRangeQuery]))
@@ -62,6 +63,13 @@
 
           (reduce step {} indexes)))
 
+(defn build-links
+  "Convert a map's collection of link-shaped maps into RiakLinks"
+  [obj]
+   (map #(let [{:keys [bucket key tag]} %] (RiakLink. bucket key tag)) (:links obj)))
+
+
+
 (defn riak-object-to-map
   "Turn an IRiakObject implementation into
   a Clojure map"
@@ -82,8 +90,8 @@
   [bucket key {:keys [value content-type links metadata indexes vector-clock]}]
   (let [^RiakObjectBuilder riak-object (-> ^RiakObjectBuilder (RiakObjectBuilder/newBuilder bucket key)
                                          (.withValue value)
-                                         (.withContentType (or content-type "application/json"))
                                          (.withLinks links)
+                                         (.withContentType (or content-type "application/json"))
                                          (.withUsermeta (or metadata {})))]
     (doseq [[index-name index-seq] indexes
              index-value index-seq]

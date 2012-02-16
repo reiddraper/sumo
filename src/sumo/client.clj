@@ -87,7 +87,7 @@
   "Store an object into Riak.
   Usage looks like:
   (sumo.client/put client \"bucket\" \"key\" {:content-type \"text/plain\" :value \"hello!\"})"
-  (let [new-obj (assoc obj :value (serialize obj))
+  (let [new-obj (assoc obj :value (serialize obj) :links (i/build-links obj))
         results (put-raw client bucket key new-obj (or (first options) {}))]
     (for [r results]
       (assoc r :value (deserialize r)))))
