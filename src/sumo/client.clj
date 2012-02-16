@@ -56,7 +56,9 @@
   ([] (connect-http "http://127.0.0.1:8098/riak"))
   ([^String url]
    (HTTPClientAdapter.
-     (com.basho.riak.client.http.RiakClient. url))))
+     (com.basho.riak.client.http.RiakClient. url)))
+  ([host port & [riak-path]]
+     (connect-http (format "http://%s:%s/%s" host port riak-path))))
 
 (defn ping
   "Returns true or raises ConnectException"
