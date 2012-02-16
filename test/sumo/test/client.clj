@@ -35,6 +35,14 @@
                    :value "Hello"
                    :indexes indexes}) => (one-of (contains {:indexes indexes}))))
 
+(fact "put-get-links"
+  (let [links [{:bucket "b" :key "k0" :tag "t"}
+         {:bucket "b" :key "k1" :tag "t"}]]
+    (put-then-get {:content-type "application/json"
+                   :value "Hello"
+                   :links links}) => (one-of (contains {:links links}))))
+
+
 (fact "summing the keys in an empty bucket through
       map-reduce results in zero keys being summed"
       (let [query {"inputs" "non-existent-bucket"
