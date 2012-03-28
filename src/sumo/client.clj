@@ -43,7 +43,7 @@
   at the default protocol buffers port"
   ([] (connect-pb default-host
                default-port))
-  ([^String host ^long port]
+  ([^String host ^Long port]
    (PBClientAdapter.
      (com.basho.riak.pbc.RiakClient. host port))))
 
