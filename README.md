@@ -10,7 +10,7 @@
 lein deps
 ```
 
-To use sumo with another project, add `[sumo "0.1.0"]` to your `projects.clj`.
+To use sumo with another project, add `[sumo "0.1.0"]` to your `project.clj`.
 
 ## Usage
 ```clojure
