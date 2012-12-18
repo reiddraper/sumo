@@ -88,7 +88,7 @@
              index-value index-seq]
         (.addIndex riak-object (name index-name) index-value))
     (if vector-clock
-      (.build (.withValue riak-object vector-clock))
+      (.build (.withVClock riak-object vector-clock))
       (.build riak-object))))
 
 
